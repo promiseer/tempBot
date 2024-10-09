@@ -7,57 +7,62 @@ const {
   waitForSelector,
   puppeteerInstance,
   selectOption,
-} = require("../../common/pupeteer");
+} = require("../../utils/pupeteer");
+const logger = require("../../utils/logger");
 
-const Scrapper = async (
-  url = "https://registration.telangana.gov.in/auth_login.htm"
-) => {
-  const username = process.env.TEL_EC_USERNAME
-  const password = process.env.TEL_EC_PASSWORD
+const telEcDownloader = async (maxTries = 0) => {
+  if (maxTries >= 3) {
+    logger.error(`Max tries of ${maxTries} reached. Stopping execution.`);
+    return;
+  }
+  const username = process.env.TEL_EC_USERNAME;
+  const password = process.env.TEL_EC_PASSWORD;
+  const url = "https://registration.telangana.gov.in/auth_login.htm";
+
   let browser;
 
   try {
     browser = await puppeteerInstance();
     const page = await browser.newPage();
-    await navigateToPage(page, url);
+    await navigateToLoginPage(page, url);
 
-    const captchaText = await handleCaptcha(page);
-    await login(browser, page, username, password, captchaText);
+    const captchaText = await solveCaptcha(page);
+    await attemptLogin(browser, page, username, password, captchaText);
 
     await handlePostLogin(page, browser);
     await browser.close();
   } catch (error) {
-    handleError(error, browser);
+    handleScraperError(error, browser);
   }
 };
 
-const navigateToPage = async (page, url) => {
+const navigateToLoginPage = async (page, url) => {
   await page.goto(url, { waitUntil: "networkidle2" });
   await waitForSelector(page, ".container");
 };
 
-const handleCaptcha = async (page) => {
+const solveCaptcha = async (page) => {
   let attempts = 0;
   let captchaText = "";
 
   while (!captchaText || !/^[a-zA-Z0-9]{6}$/.test(captchaText)) {
     if (attempts >= 3) {
-      console.log("Maximum attempts reached. Refreshing the page...");
+      logger.info("Maximum attempts reached. Refreshing the page...");
       await page.reload({ waitUntil: ["networkidle2", "domcontentloaded"] });
       attempts = 0; // Reset attempts after refresh
-      await delay(3000);
+      await delay(1000);
       continue;
     }
 
     const imageSelector = 'img[src="/Captcha.jpg"]';
     await waitForSelector(page, imageSelector);
-    await waitForImageToLoad(page, imageSelector);
+    await ensureImageIsLoaded(page, imageSelector);
 
-    const captchaImageBuffer = await captureCaptchaImage(page, imageSelector);
-    captchaText = await extractCaptchaText(captchaImageBuffer);
+    const captchaImageBuffer = await captureCaptcha(page, imageSelector);
+    captchaText = await extractCaptchaFromImage(captchaImageBuffer);
 
     if (!captchaText || !/^[a-zA-Z0-9]{6}$/.test(captchaText)) {
-      console.log("Invalid captcha. Retrying...");
+      logger.info("Invalid captcha. Retrying...");
       attempts++;
       await delay(5000);
     }
@@ -65,7 +70,7 @@ const handleCaptcha = async (page) => {
   return captchaText;
 };
 
-const waitForImageToLoad = async (page, selector) => {
+const ensureImageIsLoaded = async (page, selector) => {
   await page.evaluate((selector) => {
     return new Promise((resolve, reject) => {
       const img = document.querySelector(selector);
@@ -81,7 +86,7 @@ const waitForImageToLoad = async (page, selector) => {
   }, selector);
 };
 
-const captureCaptchaImage = async (page, selector) => {
+const captureCaptcha = async (page, selector) => {
   const imgElement = await page.$(selector);
   if (!imgElement) {
     throw new Error("Image element not found after it was loaded.");
@@ -89,32 +94,32 @@ const captureCaptchaImage = async (page, selector) => {
   return await imgElement.screenshot({ encoding: "binary" });
 };
 
-const extractCaptchaText = async (buffer) => {
+const extractCaptchaFromImage = async (buffer) => {
   const { data } = await tesseract.recognize(buffer, "eng");
   return data.text.trim();
 };
 
-const login = async (browser, page, username, password, captchaText) => {
+const attemptLogin = async (browser, page, username, password, captchaText) => {
   await selectOption(page, "#user_type", "2"); // Select 'Citizen'
   await fillInput(page, "#username", username);
   await fillInput(page, "#password", password);
   await fillInput(page, "#captcha", captchaText);
 
-  console.log("Form filled.");
+  logger.info("Form filled.");
   await clickButton(page, 'button.btn.btn-default[type="submit"]');
 
-  const element = await page
+  const loginErrorElement = await page
     .waitForSelector("#myForm > h4", { timeout: 5000 })
     .catch(() => null);
 
-  console.log("Login attemptet.");
-  if (element) {
-    console.log("Selector found, reloading the page...");
+  if (loginErrorElement) {
+    logger.error("Login Atempt Error, reloading the page...");
     await page.close();
-    await browser.close();
-    return Scrapper(); // Retry on successful login
+    return;
+    // return telEcDownloader(); // Retry on successful login
   } else {
-    console.log("Selector not found, continuing...");
+    logger.info("Selector not found, continuing...");
+    logger.info("Logged in Succesfully");
   }
 };
 
@@ -124,19 +129,15 @@ const handlePostLogin = async (
   isSearchByDocumentNumber = true
 ) => {
   try {
-    await delay(3000);
-
     await clickButton(
       page,
       "body > div.xs-hidden > div:nth-child(1) > div.container > div > form > div:nth-child(8) > a"
     );
 
-    const newPagePromise = getNewPageWhenLoaded(browser);
+    const newPage = await getNewPageWhenLoaded(browser);
 
-    const newPage = await newPagePromise;
-
-    console.log("Landed on EC Search submit.");
-    await delay(3000);
+    logger.info("Landed on EC Search submit.");
+    await delay(1000);
 
     // Click the submit button
     await clickButton(newPage, "button.btn.btn-default");
@@ -149,7 +150,6 @@ const handlePostLogin = async (
     }
 
     await clickButton(newPage, "#checkall2"); //select all docs
-    await delay(3000);
 
     await clickButton(
       newPage,
@@ -157,29 +157,36 @@ const handlePostLogin = async (
     );
     await delay(3000);
 
-    await downloadPdf(newPage, "Downloads/TEL-EncumbranceCertificate-document"); // Download the PDF
+    // // await downloadPdf(
+    //   newPage,
+    //   "public/Downloads/TEL-EncumbranceCertificate-document"
+    // ); // Download the PDF
     await newPage.close();
   } catch (error) {
-    console.log("ERROR:", error);
+    logger.error("Post-login action error:", error);
   }
 };
 
-const handleError = async (error, browser) => {
-  if (error.message.includes("Navigation timeout of")) {
-    console.error(
-      "ERROR TimeoutError: Navigation timeout of 30000 ms exceeded"
-    );
-    console.error("trying again");
-    await browser.close();
-    return Scrapper();
-  }
-  if (error.message.includes("ERR_NAME_NOT_RESOLVED")) {
-    console.error("ERROR check your internet connection");
-    return process.exit(1);
-  }
+const handleScraperError = async (error, browser) => {
+  try {
+    if (error.message.includes("Navigation timeout of")) {
+      logger.error(
+        "ERROR TimeoutError: Navigation timeout of 10000 ms exceeded"
+      );
+      logger.error("trying again");
+      await browser.close();
+      return;
+    }
+    if (error.message.includes("ERR_NAME_NOT_RESOLVED")) {
+      logger.error("ERROR check your internet connection");
+      return;
+    }
 
-  console.error("ERROR=>", error.message, error);
-  return Scrapper();
+    logger.error(`ERROR=> ${error.message} `);
+    await browser.close();
+    return new Error(error.message);
+  } catch (error) {}
+  logger.error(error.message);
 };
 
 const getNewPageWhenLoaded = async (browser) => {
@@ -195,7 +202,7 @@ const getNewPageWhenLoaded = async (browser) => {
 };
 
 const searchByDocumentNumber = async (page) => {
-  await delay(3000);
+  // await delay(1000);
 
   await fillInput(page, "#doct", "10");
   await fillInput(page, "#regyear", "2020");
@@ -211,7 +218,7 @@ const searchByDocumentNumber = async (page) => {
     page,
     "#bean > div:nth-child(39) > div:nth-child(15) > button.btn.btn-default"
   );
-  await delay(3000);
+  await delay(1000);
   return;
 };
 
@@ -220,7 +227,7 @@ const searchByProperty = async (page) => {
     page,
     "#command > div:nth-child(1) > div.col-md-2.col-sm-4"
   );
-  await delay(3000);
+  await delay(1000);
   await selectOption(page, "#dist_code", "16_1"); // Select 'dist_code'
   await delay(1000);
 
@@ -258,5 +265,4 @@ const searchByProperty = async (page) => {
 
   return;
 };
-// Execute the scrapper
-Scrapper();
+module.exports = telEcDownloader;

@@ -1,3 +1,4 @@
+const logger = require("../../utils/logger");
 const {
   clickButton,
   fillInput,
@@ -6,7 +7,10 @@ const {
   getCaptchaText,
   downloadPdf,
   puppeteerInstance,
-} = require("../../common/pupeteer");
+  elementFinder,
+  generatePDF,
+} = require("../../utils/pupeteer");
+const fs = require("fs");
 
 // Helper function for navigation error handling
 const handleNavigationError = async (fn, ...args) => {
@@ -14,28 +18,22 @@ const handleNavigationError = async (fn, ...args) => {
     return await fn(...args);
   } catch (error) {
     if (error.message.includes("Navigation timeout of")) {
-      console.error(
+      logger.error(
         "ERROR TimeoutError: Navigation timeout of 30000 ms exceeded, retrying..."
       );
       return fn(...args); // Retry on timeout
     }
     if (error.message.includes("ERR_NAME_NOT_RESOLVED")) {
-      console.error("ERROR: Check your internet connection.");
+      logger.error("ERROR: Check your internet connection.");
       process.exit(1); // Exit on connection issue
     }
-    console.error("ERROR: ", error.message);
+    logger.error("ERROR: ", error.message);
     throw error;
   }
 };
 
 // Search by Document Number
-const searchByDocumentNumber = async (
-  page,
-  url,
-  documentNumber,
-  yearOfRegistration,
-  registeredSRO
-) => {
+const searchByDocumentNumber = async (page, url, docNo, docYear, sroName) => {
   try {
     await page.goto(url, { waitUntil: "networkidle0" });
     await page.waitForSelector("#encumbranceServiceForm");
@@ -47,16 +45,16 @@ const searchByDocumentNumber = async (
     await fillInput(
       page,
       '#encumbranceServiceForm input[name="docMemoNo"]',
-      documentNumber
+      docNo
     );
     await fillInput(
       page,
       '#encumbranceServiceForm input[name="yearOfRegistration"]',
-      yearOfRegistration
+      docYear
     );
 
     // Select SRO using a dropdown
-    await dropDownSelector(page, "input.react-select__input", registeredSRO);
+    await dropDownSelector(page, "input.react-select__input", sroName);
 
     // Get CAPTCHA text and fill it in
     const captchaText = await getCaptchaText(
@@ -72,7 +70,7 @@ const searchByDocumentNumber = async (
 
     // Submit form
     await clickButton(page, '#encumbranceServiceForm button[type="submit"]');
-    console.log("Logged in successfully");
+    logger.info("Logged in successfully");
 
     // Validate response and get property list
     const propertyList = await responseValidator(
@@ -83,62 +81,80 @@ const searchByDocumentNumber = async (
 
     // Continue to next steps
     await handleSecondForm(page, sroList);
-  } catch (error) {
-    return handleNavigationError(
-      searchByDocumentNumber,
+    await page.waitForNavigation();
+
+    const filePath = await generatePDF(
       page,
-      url,
-      documentNumber,
-      yearOfRegistration,
-      registeredSRO
+      "#__next > div > div:nth-child(2) > div > div.container > div:nth-child(2) > div > table",
+      `Public/Downloads/AP-EncumbranceCertificate-document-by-doc-${docNo}`
     );
+    await page.close();
+
+    return filePath;
+  } catch (error) {
+    logger.error("Error in searchByDocumentNumber:", error.message);
+    throw error;
+
+    //   return handleNavigationError(
+    //     searchByDocumentNumber,
+    //     page,
+    //     url,
+    //     docNo,
+    //     yearOfRegistration,
+    //     sroName
+    //   );
   }
 };
 
 // Handle the second form submission
 const handleSecondForm = async (page, sroList) => {
-  // Click NEXT button after first form submission
-  await clickButton(page, "button.btn.btn-primary.btn-sm");
-  console.log("2nd Form submitted successfully!");
+  try {
+    // Click NEXT button after first form submission
+    await clickButton(page, "button.btn.btn-primary.btn-sm");
+    logger.info("2nd Form submitted successfully!");
 
-  await page.waitForSelector("form");
-  await page.type('form input[name="applicantName"]', ".");
+    await page.waitForSelector("form");
+    await page.type('form input[name="applicantName"]', ".");
 
-  // Get new CAPTCHA text and fill it
-  const captchaText = await getCaptchaText(
-    page,
-    "form div.col-lg-1.col-md-1.col-1 span",
-    3,
-    1000
-  );
-  console.log("3rd CAPTCHA", captchaText);
-  await page.type('form input[name="captchaVal"]', captchaText);
+    // Get new CAPTCHA text and fill it
+    const captchaText = await getCaptchaText(
+      page,
+      "form div.col-lg-1.col-md-1.col-1 span",
+      3,
+      1000
+    );
+    logger.info("3rd CAPTCHA", captchaText);
 
-  // Select SRO values
-  await selectSRO(page, sroList);
+    errorCaptcha = elementFinder(
+      page,
+      "#__next > div > div:nth-child(3) > div.MainContent > div > div > div > div > div > form > div.p.row > div.col-lg-3.col-md-3.col-3 > div"
+    );
+    if (errorCaptcha) {
+      logger.info("Captcha error found");
+    }
+    await page.type('form input[name="captchaVal"]', captchaText);
 
-  // Submit form and proceed to download
-  await clickButton(page, 'form button[type="submit"]');
-  await page.waitForSelector("#selectAllId");
-  await page.click("#selectAllId");
-  await page.click(".btn.btn-primary");
+    // Select SRO values
+    await selectSRO(page, sroList);
 
-  await page.waitForNavigation();
-  
-  await downloadPdf(page, "Downloads/AP-EncumbranceCertificate-document-by-doc");
-  await page.close();
+    // Submit form and proceed to download
+    await clickButton(page, 'form button[type="submit"]');
+    await clickButton(page, "#selectAllId");
+    await clickButton(page, ".btn.btn-primary");
+  } catch (error) {
+    throw error;
+  }
 };
 
 // Select the SRO values
 const selectSRO = async (page, sroList) => {
-  const selectedSROValue = ["PEDAGANTYADA(317)", "MADURAWADA(315)"];
   await page.click("div.react-select__control"); // Focus on the dropdown
 
-  for (let sro of selectedSROValue) {
-    await page.type("input.react-select__input", sro);
-    await page.keyboard.press("Enter"); // Select each SRO option
+  for (let sro of sroList.slice(0, 2)) {
+    //first 2 SROS only
+    await dropDownSelector(page, "input.react-select__input", sro);
   }
-  console.log("Selected SRO values:", selectedSROValue);
+  // logger.info(`Selected SRO values: ${JSON.stringify(sroList[0])}`);
 };
 
 // Search by None (without document number)
@@ -179,15 +195,23 @@ const ScrapeByNone = async (page, url, searchByBuildingDetails = false) => {
     await clickButton(page, "button.btn.btn-primary");
     await page.waitForNavigation();
 
-    await downloadPdf(page, "Downloads/AP-EncumbranceCertificate-document");
-    await page.close();
-  } catch (error) {
-    return handleNavigationError(
-      ScrapeByNone,
+    const filePath = await generatePDF(
       page,
-      url,
-      searchByBuildingDetails
+      "#__next > div > div:nth-child(2) > div > div.container > div:nth-child(2) > div > table",
+      `Public/Downloads/AP-EncumbranceCertificate-document-without-docNumber`
     );
+
+    await page.close();
+    return filePath;
+  } catch (error) {
+    throw error;
+
+    //   return handleNavigationError(
+    //     ScrapeByNone,
+    //     page,
+    //     url,
+    //     searchByBuildingDetails
+    //   );
   }
 };
 
@@ -220,38 +244,51 @@ const submitAndValidateCaptcha = async (page) => {
 };
 
 // Main function to trigger the script
-const main = async (
-  documentNumber = "3664",
-  yearOfRegistration = "2024",
-  registeredSRO = "VISAKHAPATNAM(R.O)(311)"
-) => {
+const apEcDownloader = async ({
+  docNo,
+  docYear,
+  sroName,
+  State,
+  ownerName,
+  houseNo,
+  surveyNo,
+  village,
+  ward,
+  block,
+  district,
+}) => {
   const browser = await puppeteerInstance();
   const page = await browser.newPage();
-  console.log(":: Automation Started");
-
+  logger.info(":: Automation Started");
+  let filePath;
   try {
-    if (documentNumber) {
-      await searchByDocumentNumber(
+    if (docNo) {
+      logger.info("...searching by documentNo ");
+      filePath = await searchByDocumentNumber(
         page,
         "https://registration.ec.ap.gov.in/ecSearch",
-        documentNumber,
-        yearOfRegistration,
-        registeredSRO
+        docNo,
+        docYear,
+        sroName
       );
     } else {
-      await ScrapeByNone(
+      logger.info("..searching without documentNo ");
+
+      filePath = await ScrapeByNone(
         page,
         "https://registration.ec.ap.gov.in/ecSearch/EncumbranceSearch",
         false
       );
     }
+
+    await browser.close();
+    return { status: "ok", filePath };
   } catch (error) {
-    console.log(error.message);
+    logger.info(error.message);
+    throw new Error(error.message);
   } finally {
     await browser.close();
   }
 };
 
-main()
-  .then(() => console.log(":: Automation Completed"))
-  .catch((error) => console.log(error));
+module.exports = apEcDownloader;

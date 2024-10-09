@@ -5,15 +5,25 @@
   "main": "src/app.ts",
   "scripts": {
     "start": "tsc && node dist/app.js",
+    "dev": "nodemon src/app.js",
+    "worker": "node src/workers/botomationWorker.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@bull-board/express": "^6.0.0",
+    "@google-cloud/storage": "^7.13.0",
+    "axios": "^1.7.7",
+    "bull": "^4.16.3",
+    "dotenv": "^16.4.5",
     "express": "^4.21.0",
+    "morgan": "^1.10.0",
+    "nodemon": "^3.1.7",
     "puppeteer": "^23.3.0",
-    "tesseract.js": "^5.1.1"
+    "tesseract.js": "^5.1.1",
+    "winston": "^3.15.0"
   },
   "devDependencies": {
     "@types/express": "^5.0.0",

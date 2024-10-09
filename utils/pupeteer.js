@@ -1,16 +1,19 @@
 const puppeteer = require("puppeteer");
 const fs = require("fs");
-
+const { promisify } = require("util");
+const logger = require("./logger");
+const writeFileAsync = promisify(fs.writeFile);
+const readFileAsync = promisify(fs.readFile);
 const puppeteerInstance = async (options = {}) => {
   try {
     const browser = await initializeBrowser(options);
 
     browser.on("disconnected", () => {
-      console.log(":: Browser disconnected");
+      logger.info(":: Browser disconnected");
     });
     return browser;
   } catch (error) {
-    console.error("Error launching Puppeteer:", error);
+    logger.error("Error launching Puppeteer:", error);
     throw error;
   }
 };
@@ -28,7 +31,7 @@ const initializeBrowser = async (options) => {
 };
 
 const delay = async (delay) => {
-  console.log(`Sleeping for ${delay}ms`);
+  logger.info(`Sleeping for ${delay}ms`);
   await new Promise((resolve) => setTimeout(resolve, delay));
 };
 
@@ -57,9 +60,38 @@ const selectOption = async (page, selector, value) => {
   await page.select(selector, value);
 };
 
-const clickButton = async (page, selector, text) => {
-  await page.waitForSelector(selector);
-  await page.locator(selector).click(); // Select Buildings (OR) Structures or Survey Numbers
+const clickButton = async (page, selector, maxAttempts = 3, sleep = 1000) => {
+  let attempts = 0;
+  let clicked = false;
+
+  while (attempts < maxAttempts && !clicked) {
+    try {
+      await page.waitForSelector(selector);
+      const button = await page.locator(selector);
+      if (await button.wait()) {
+        await button.click(); // Click the button
+        // logger.info(`Button  clicked on attempt ${attempts + 1}`);
+        clicked = true;
+      } else {
+        logger.info(`Button not visible on attempt ${attempts + 1}`);
+      }
+    } catch (error) {
+      logger.info(`Error on attempt ${attempts + 1}: ${error}`);
+    }
+
+    attempts++;
+
+    if (!clicked && attempts < maxAttempts) {
+      logger.info(`Retrying... (${attempts}/${maxAttempts})`);
+      await delay(sleep); // Wait before retrying
+    }
+  }
+
+  if (!clicked) {
+    throw new Error(
+      `Failed to click the button after ${maxAttempts} attempts.`
+    );
+  }
 };
 
 const responseValidator = async (page, url) => {
@@ -90,11 +122,11 @@ const getCaptchaText = async (
 
   // If captchaText is not empty, return it
   if (captchaText) {
-    console.log("Captcha Text Found:", captchaText);
+    logger.info("Captcha Text Found:", captchaText);
     return captchaText;
   } else if (maxRetries > 0) {
     // Retry after a specified interval if captchaText is empty
-    console.log(`Retrying... attempts left: ${maxRetries}`);
+    logger.info(`Retrying... attempts left: ${maxRetries}`);
     await new Promise((resolve) => setTimeout(resolve, retryInterval)); // Wait before retrying
     return getCaptchaText(page, selector, maxRetries - 1, retryInterval);
   } else {
@@ -118,7 +150,62 @@ const downloadPdf = async (page, path) => {
 
   // Save the PDF to a file
   fs.writeFileSync(`${path}.pdf`, pdfBuffer);
-  console.log(`PDF saved as ${path}.pdf`);
+  logger.info(`PDF saved as ${path}.pdf`);
+};
+
+const elementFinder = async (page, selector, delay = 1000) => {
+  await page.waitForSelector(selector, { timeout: delay }).catch(() => null);
+};
+
+const generatePDF = async (page, tableSelector, filePath) => {
+  try {
+    const htmlTemplate = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Extracted Table PDF</title>
+  <style>
+      table {
+          border-collapse: collapse;
+      }
+
+      td, th {
+          border: 1px solid black;
+          padding: 8px;
+          margin-bottom: 0;
+      }
+
+      .centered-table {
+          text-align: center;
+      }
+  </style>
+</head>
+<body>
+  <div id="content">
+      <!-- Table will be appended here -->
+  </div>
+</body>
+</html>`;
+
+    const tableHTML = await page.evaluate((selector) => {
+      const table = document.querySelector(selector);
+      return table ? table.outerHTML : "<p>Table not found</p>";
+    }, tableSelector);
+
+    const finalHTML = htmlTemplate.replace(
+      "<!-- Table will be appended here -->",
+      tableHTML
+    );
+
+    await page.setContent(finalHTML); // Set the HTML content to the page
+    await downloadPdf(page, filePath);
+    return `${filePath}.pdf`;
+  } catch (error) {
+    logger.error(`Error:`, error);
+    throw error;
+  }
 };
 
 module.exports = {
@@ -132,4 +219,6 @@ module.exports = {
   getCaptchaText,
   downloadPdf,
   delay,
+  elementFinder,
+  generatePDF,
 };
