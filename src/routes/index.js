@@ -1,10 +1,48 @@
 const router = require("express").Router();
 const { Queue } = require("../../queues");
+const logger = require("../../utils/logger");
 
 router.post("/generate-ec", async (req, res) => {
-  const { EC_TYPE, OPTIONS } = req.body;
+  const {
+    state,
+    caseId,
+    docNo,
+    docYear,
+    sroName,
+    ownerName,
+    houseNo,
+    surveyNo,
+    village,
+    wardBlock,
+    district,
+    filePath,
+  } = req.body;
+
+  if (!state || !caseId) {
+    return res.status(400).send({ message: "requestparameter not found" });
+  }
+
+  if (!filePath || typeof filePath !== "string" || filePath.trim() === "") {
+    throw new Error(
+      "Invalid file path: fileDestination is either empty or not provided."
+    );
+  }
+
   const job = await Queue.add(
-    { EC_TYPE, OPTIONS },
+    {
+      state,
+      caseId,
+      docNo,
+      docYear,
+      sroName,
+      ownerName,
+      houseNo,
+      surveyNo,
+      village,
+      wardBlock,
+      district,
+      filePath,
+    },
     {
       attempts: 3, // Retry job 3 times on failure
       removeOnComplete: true, // Automatically remove job after completion

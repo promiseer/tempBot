@@ -35,8 +35,8 @@ const getToken = async () => {
   }
 };
 
-const createAttachement = async ({ CaseID }, file) => {
-  if (!CaseID || !file) {
+const createAttachement = async (caseId, file) => {
+  if (!caseId || !file) {
     logger.error("requested parameters not found");
     throw new Error("requested parameters not found");
   }
@@ -46,7 +46,7 @@ const createAttachement = async ({ CaseID }, file) => {
     const response = await axios.post(
       `${backendUrl}/request/create/attachments`,
       {
-        request: CaseID,
+        request: caseId,
         attachments: [
           {
             id: null,

@@ -3,7 +3,7 @@ const { googleApiKey, bucketName } = require("../config/config");
 const fs = require("fs");
 const logger = require("./logger");
 
-async function uploadFileGC(filePath) {
+async function uploadFileGC(fileDestination, filePath) {
   return new Promise(async (resolve, reject) => {
     try {
       const fileKey = Date.now().toString();
@@ -12,7 +12,7 @@ async function uploadFileGC(filePath) {
       });
 
       const bucket = storage.bucket(bucketName);
-      const fileGC = bucket.file(fileKey);
+      const fileGC = bucket.file(fileDestination + fileKey);
       const readStream = fs.createReadStream(filePath);
 
       readStream
