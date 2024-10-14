@@ -1,9 +1,23 @@
 const { Queue, BOTOMATION_TASKS } = require("../../queues");
+const { deleteFile } = require("../../utils/deleteFile");
 const { uploadFileGC } = require("../../utils/googleBucketUtils");
 const logger = require("../../utils/logger");
 const apEcDownloader = require("../automations/apEcDownloader");
 const telEcDownloader = require("../automations/telEcDownloader");
 const { createAttachement } = require("../services/nirnai.service");
+
+Queue.on("ready", () => {
+  logger.info("Queue is running and ready to process jobs.");
+});
+
+Queue.on("error", (error) => {
+  logger.error(`Queue encountered an error: ${error.message}`);
+  throw new Error("Queue is not running or cannot connect to Redis.");
+});
+
+Queue.on("stalled", (job) => {
+  logger.warn(`Job ${job.id} stalled and will be retried.`);
+});
 
 Queue.process(async (job) => {
   const { queue, data, id } = job;
@@ -19,18 +33,19 @@ Queue.process(async (job) => {
     }
     logger.info(`Worker listening to '${queue.name}' queue`);
     switch (state) {
-      case "ANDHRA_PRADESH":
+      case "ANDHRA PRADESH":
         try {
           const { filePath } = await apEcDownloader(data);
           if (filePath) {
             const file = await uploadFileGC(fileDestination, filePath);
             await createAttachement(caseId, file);
+            await deleteFile(filePath);
             logger.info(
-              `Successfully processed ANDHRA_PRADESH with Job ID:${id} `
+              `Successfully processed ANDHRA PRADESH with Job ID:${id} `
             );
           }
         } catch (error) {
-          logger.error(`Error processing ANDHRA_PRADESH: ${error.message}`);
+          logger.error(`Error processing ANDHRA PRADESH: ${error.message}`);
         }
         break;
 
@@ -38,6 +53,7 @@ Queue.process(async (job) => {
         try {
           // @TODO: few checks pending
           // await telEcDownloader();
+          // await deleteFile(filePath);
           logger.info(`Successfully processed TEL-EC with Job ID:${id} `);
         } catch (error) {
           logger.error(`Error processing TELANGANA: ${error.message}`);

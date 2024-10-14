@@ -52,7 +52,7 @@ const createAttachement = async (caseId, file) => {
             id: null,
             docCategory: null,
             docType: "DOCUMENT_TYPE.ENCUMBRANCE_S",
-            docNumber: "CONTRACT-001",
+            docNumber: "ECS" + file,
             docDate: null,
             docLink: file,
             docSource: null,

@@ -12,7 +12,7 @@ async function uploadFileGC(fileDestination, filePath) {
       });
 
       const bucket = storage.bucket(bucketName);
-      const fileGC = bucket.file(fileDestination + fileKey);
+      const fileGC = bucket.file(fileDestination + "/" + fileKey);
       const readStream = fs.createReadStream(filePath);
 
       readStream

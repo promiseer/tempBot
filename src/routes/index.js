@@ -27,30 +27,39 @@ router.post("/generate-ec", async (req, res) => {
       "Invalid file path: fileDestination is either empty or not provided."
     );
   }
-
-  const job = await Queue.add(
-    {
-      state,
-      caseId,
-      docNo,
-      docYear,
-      sroName,
-      ownerName,
-      houseNo,
-      surveyNo,
-      village,
-      wardBlock,
-      district,
-      filePath,
-    },
-    {
-      attempts: 3, // Retry job 3 times on failure
-      removeOnComplete: true, // Automatically remove job after completion
-      removeOnFail: 1000, // Keep 1000 failed jobs before deleting old ones
+  try {
+    const job = await Queue.add(
+      {
+        state,
+        caseId,
+        docNo,
+        docYear,
+        sroName,
+        ownerName,
+        houseNo,
+        surveyNo,
+        village,
+        wardBlock,
+        district,
+        filePath,
+      },
+      {
+        attempts: 3, // Retry job 3 times on failure
+        removeOnComplete: true, // Automatically remove job after completion
+        removeOnFail: 1000, // Keep 1000 failed jobs before deleting old ones
+      }
+    );
+    if (!job) {
+      throw new Error(
+        "Failed to add job to the queue: Queue might not be running."
+      );
     }
-  );
 
-  res.status(201).json({ ok: 1, data: { jobId: job.id } });
+    res.status(201).json({ ok: 1, data: { jobId: job.id } });
+  } catch (error) {
+    console.error(`Failed to add job to the queue: ${error.message}`);
+    res.status(500).send({ message: error.message });
+  }
 });
 
 // API endpoint to check job status
