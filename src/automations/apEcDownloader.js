@@ -158,25 +158,41 @@ const selectSRO = async (page, sroList) => {
 };
 
 // Search by None (without document number)
-const ScrapeByNone = async (page, url, searchByBuildingDetails = false) => {
+const ScrapeByNone = async (
+  page,
+  url,
+  searchByBuildingDetails = true,
+  surveyNo,
+  village,
+  houseNo,
+  ward,
+  block,
+  district,
+  sroName,
+  ownerName
+) => {
   try {
     await page.goto(url, { waitUntil: "networkidle0" });
 
     await page.waitForSelector("form");
-    await dropDownSelector(page, ".react-select__input", "EAST GODAVARI");
+    await dropDownSelector(page, ".react-select__input", district); //select district
     await page.waitForResponse(
       (response) =>
         response.url() ===
           "https://registration.ec.ap.gov.in/ecSearchAPI/v1/public/getSroList" &&
         response.status() === 200
     );
-    await dropDownSelector(page, "#react-select-3-input", "SEETHANAGARAM");
-    await fillInput(page, ".Table_columnInputBox__zkfbO", ".");
+    await dropDownSelector(page, "#react-select-3-input", sroName); // @TODO: multiple SRO
+    await fillInput(
+      page,
+      ".Table_columnInputBox__zkfbO",
+      ownerName ? ownerName : "."
+    ); //applicant name
 
     if (searchByBuildingDetails) {
-      await fillBuildingDetails(page);
+      await fillBuildingDetails(page, surveyNo, houseNo, ward, block, village); //@todo: add alias if required
     } else {
-      await fillSurveyDetails(page);
+      await fillSurveyDetails(page, surveyNo, village);
     }
 
     await submitAndValidateCaptcha(page);
@@ -216,19 +232,29 @@ const ScrapeByNone = async (page, url, searchByBuildingDetails = false) => {
 };
 
 // Fill the building details form
-const fillBuildingDetails = async (page) => {
-  await fillInput(page, 'input[name="inSurveyNo"]', "55/1E");
-  await fillInput(page, 'input[name="houseNo"]', "11-52/3");
-  await fillInput(page, 'input[name="villageOrCity"]', "Raghudevpuram");
-  await fillInput(page, 'input[name="alias"]', "SEETHANAGARAM");
+const fillBuildingDetails = async (
+  page,
+  surveyNo,
+  houseNo,
+  ward,
+  block,
+  village,
+  alias = "SEETHANAGARAM"
+) => {
+  await fillInput(page, 'input[name="inSurveyNo"]', surveyNo);
+  await fillInput(page, 'input[name="houseNo"]', houseNo);
+  await fillInput(page, 'input[name="wardNo"]', ward);
+  await fillInput(page, 'input[name="blockNo"]', block);
+  await fillInput(page, 'input[name="villageOrCity"]', village);
+  await fillInput(page, 'input[name="alias"]', alias);
 };
 
 // Fill the survey details form
-const fillSurveyDetails = async (page) => {
+const fillSurveyDetails = async (page, survey, village) => {
   await clickButton(page, '.form-check-input[value="BS"]');
   await clickButton(page, '.form-check-input[value="SAL"]');
-  await fillInput(page, 'input[name="inSurveyNo"]', "55/1E");
-  await fillInput(page, 'input[name="revenueVillage"]', "Raghudevpuram");
+  await fillInput(page, 'input[name="inSurveyNo"]', survey);
+  await fillInput(page, 'input[name="revenueVillage"]', village);
 };
 
 // Submit form and fill CAPTCHA
@@ -277,7 +303,15 @@ const apEcDownloader = async ({
       filePath = await ScrapeByNone(
         page,
         "https://registration.ec.ap.gov.in/ecSearch/EncumbranceSearch",
-        false
+        false,
+        surveyNo,
+        village,
+        houseNo,
+        ward,
+        block,
+        district,
+        sroName,
+        ownerName
       );
     }
 

@@ -145,7 +145,7 @@ const downloadPdf = async (page, path) => {
   const pdfBuffer = await page.pdf({
     format: "Legal", // Adjust the format as needed
     printBackground: true, // Include background graphics
-    // margin: { top: 40, right: 40, bottom: 40, left: 40 }, // Adjust margins as needed
+    margin: { top: 40, right: 40, bottom: 40, left: 40 }, // Adjust margins as needed
   });
 
   // Save the PDF to a file
