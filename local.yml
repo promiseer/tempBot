@@ -1,0 +1,38 @@
+
+services:
+  backend:
+    build: 
+      context: .
+      dockerfile: ./compose/local/Dockerfile
+    container_name: botomation_backend
+    restart: unless-stopped
+    ports:
+      - "3000:3000" # Expose the backend on port 3000
+    environment:
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      - redis # Ensure Redis starts before the Node app
+    volumes:
+      - .:/app
+    command: npm run dev
+
+  worker:
+    build: 
+      context: .
+      dockerfile: ./compose/local/Dockerfile
+
+    container_name: botomation_worker
+    restart: always
+    environment:
+      - REDIS_URL=redis://redis:6379
+
+    depends_on:
+      - redis
+      - backend
+    volumes:
+      - .:/app
+    command: npm run worker # This runs the worker script
+
+  redis:
+    image: redis:6
+

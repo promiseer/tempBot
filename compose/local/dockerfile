@@ -1,0 +1,40 @@
+# Use Node.js LTS version
+FROM node:lts
+# Install necessary packages for Puppeteer
+RUN apt-get update && apt-get install -y \
+    libnss3 \
+    libatk1.0-0 \
+    libatk-bridge2.0-0 \
+    libcups2 \
+    libxcomposite1 \
+    libxrandr2 \
+    libxdamage1 \
+    libxfixes3 \
+    libpango1.0-0 \
+    libgbm-dev \
+    libasound2 \
+    libgtk-3-0 \
+    libdrm2 \
+    libxcb-dri3-0 \
+    libxshmfence1 \
+    ca-certificates \
+    fonts-liberation \
+    gconf-service \
+    libappindicator1 \
+    libappindicator3-1 \
+    libasound2 \
+    # libcurl3 \
+    lsb-release \
+    xdg-utils \
+    wget
+
+# Set working directory
+WORKDIR /app
+
+# Copy package.json and install dependencies
+COPY package*.json ./
+RUN npm install
+
+# Copy the rest of the application files
+COPY . .
+
