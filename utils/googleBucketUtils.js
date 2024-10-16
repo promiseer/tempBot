@@ -1,11 +1,20 @@
 const { Storage } = require("@google-cloud/storage");
 const { googleApiKey, bucketName } = require("../config/config");
 const fs = require("fs");
+const path = require("path");
+const mime = require("mime-types");
+
 const logger = require("./logger");
+
+const getContentType = (filePath) => {
+  const ext = path.extname(filePath); // Get file extension
+  return mime.lookup(ext) || "application/octet-stream"; // Fallback to a generic type if unknown
+};
 
 async function uploadFileGC(fileDestination, filePath) {
   return new Promise(async (resolve, reject) => {
     try {
+      const contentType = getContentType(filePath);
       const fileKey = Date.now().toString();
       const storage = new Storage({
         credentials: googleApiKey,
@@ -18,7 +27,7 @@ async function uploadFileGC(fileDestination, filePath) {
       readStream
         .pipe(
           fileGC.createWriteStream({
-            contentType: "application/pdf",
+            contentType,
           })
         )
         .on("error", (error) => {

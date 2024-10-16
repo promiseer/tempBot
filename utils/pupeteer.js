@@ -1,9 +1,6 @@
 const puppeteer = require("puppeteer");
 const fs = require("fs");
-const { promisify } = require("util");
 const logger = require("./logger");
-const writeFileAsync = promisify(fs.writeFile);
-const readFileAsync = promisify(fs.readFile);
 const puppeteerInstance = async (options = {}) => {
   try {
     const browser = await initializeBrowser(options);
@@ -25,7 +22,7 @@ const initializeBrowser = async (options) => {
     saveSessionData: true, // Set to true to save session data
     caches: true, // Disable caching
     defaultViewport: null,
-    args: ["--start-maximized"],
+    args: ["--start-maximized",'--no-sandbox', '--disable-setuid-sandbox'],
     ...options,
   });
 };

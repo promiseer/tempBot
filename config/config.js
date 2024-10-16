@@ -13,6 +13,7 @@ const requiredEnvVars = [
   "ADMIN_PASSWORD",
   "GOOGLE_API_KEY",
   "CLOUD_BUCKET_NAME",
+  "REDIS_URL",
 ];
 
 try {
@@ -40,4 +41,5 @@ module.exports = {
   adminPassword: process.env.ADMIN_PASSWORD,
   googleApiKey: JSON.parse(process.env.GOOGLE_API_KEY),
   bucketName: process.env.CLOUD_BUCKET_NAME,
+  redisUrl: process.env.REDIS_URL,
 };

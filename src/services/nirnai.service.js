@@ -30,7 +30,6 @@ const getToken = async () => {
     const token = response.data.accessToken;
     return token;
   } catch (error) {
-    logger.error(`Error during login: ${error}`);
     throw error;
   }
 };

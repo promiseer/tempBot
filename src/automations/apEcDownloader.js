@@ -161,7 +161,6 @@ const selectSRO = async (page, sroList) => {
 const ScrapeByNone = async (
   page,
   url,
-  searchByBuildingDetails = true,
   surveyNo,
   village,
   houseNo,
@@ -171,6 +170,7 @@ const ScrapeByNone = async (
   sroName,
   ownerName
 ) => {
+  let filePath;
   try {
     await page.goto(url, { waitUntil: "networkidle0" });
 
@@ -182,14 +182,22 @@ const ScrapeByNone = async (
           "https://registration.ec.ap.gov.in/ecSearchAPI/v1/public/getSroList" &&
         response.status() === 200
     );
-    await dropDownSelector(page, "#react-select-3-input", sroName); // @TODO: multiple SRO
+    Array.isArray(sroName)
+      ? await Promise.all(
+          sroName.map(
+            async (sro) =>
+              await dropDownSelector(page, "#react-select-3-input", sro)
+          )
+        )
+      : await dropDownSelector(page, "#react-select-3-input", sroName); // @TODO: multiple SRO
+
     await fillInput(
       page,
       ".Table_columnInputBox__zkfbO",
       ownerName ? ownerName : "."
     ); //applicant name
 
-    if (searchByBuildingDetails) {
+    if (houseNo) {
       await fillBuildingDetails(page, surveyNo, houseNo, ward, block, village); //@todo: add alias if required
     } else {
       await fillSurveyDetails(page, surveyNo, village);
@@ -203,15 +211,19 @@ const ScrapeByNone = async (
     );
 
     if (!Object.entries(docs.data.documentList).length) {
-      await page.screenshot({ path: "no-documents-found.png" });
-      throw new Error("Documents not found on search data.");
+      filePath = "Public/Downloads/no-documents-found.png";
+      await page.screenshot({
+        path: filePath,
+      });
+      logger.error("Documents not found on search data.");
+      return filePath;
     }
 
     await clickButton(page, "#selectAllId");
     await clickButton(page, "button.btn.btn-primary");
     await page.waitForNavigation();
 
-    const filePath = await generatePDF(
+    filePath = await generatePDF(
       page,
       "#__next > div > div:nth-child(2) > div > div.container > div:nth-child(2) > div > table",
       `Public/Downloads/AP-EncumbranceCertificate-document-without-docNumber`
@@ -239,14 +251,20 @@ const fillBuildingDetails = async (
   ward,
   block,
   village,
-  alias = "SEETHANAGARAM"
+  alias
 ) => {
   await fillInput(page, 'input[name="inSurveyNo"]', surveyNo);
   await fillInput(page, 'input[name="houseNo"]', houseNo);
-  await fillInput(page, 'input[name="wardNo"]', ward);
-  await fillInput(page, 'input[name="blockNo"]', block);
+  ward
+    ? await fillInput(page, 'input[name="wardNo"]', ward)
+    : logger.info("Skipping ward no input as it's empty");
+  block
+    ? await fillInput(page, 'input[name="blockNo"]', block)
+    : logger.info("Skipping block no input as it's empty");
   await fillInput(page, 'input[name="villageOrCity"]', village);
-  await fillInput(page, 'input[name="alias"]', alias);
+  alias
+    ? await fillInput(page, 'input[name="alias"]', alias)
+    : logger.info("Skipping Alias input as it's empty");
 };
 
 // Fill the survey details form
@@ -303,7 +321,6 @@ const apEcDownloader = async ({
       filePath = await ScrapeByNone(
         page,
         "https://registration.ec.ap.gov.in/ecSearch/EncumbranceSearch",
-        false,
         surveyNo,
         village,
         houseNo,
