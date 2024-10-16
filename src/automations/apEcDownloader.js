@@ -182,14 +182,13 @@ const ScrapeByNone = async (
           "https://registration.ec.ap.gov.in/ecSearchAPI/v1/public/getSroList" &&
         response.status() === 200
     );
-    Array.isArray(sroName)
-      ? await Promise.all(
-          sroName.map(
-            async (sro) =>
-              await dropDownSelector(page, "#react-select-3-input", sro)
-          )
-        )
-      : await dropDownSelector(page, "#react-select-3-input", sroName); // @TODO: multiple SRO
+    if (Array.isArray(sroName)) {
+      for (let sro of sroName) {
+        await dropDownSelector(page, "#react-select-3-input", sro); // Handle multiple SROs
+      }
+    } else {
+      await dropDownSelector(page, "#react-select-3-input", sroName); // Handle single SRO
+    }
 
     await fillInput(
       page,
