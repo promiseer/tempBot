@@ -23,7 +23,7 @@ router.post("/generate-ec", async (req, res) => {
   }
 
   if (
-    (!Array.isArray(sroName) && !/^[A-Z]+?\(\d{3}\)$/.test(sroName)) ||
+    (!Array.isArray(sroName) && !/^[A-Z]+(?:\([A-Z0-9.]+\)|\(\d{3}\))+$/.test(sroName)) ||
     !sroName.length
   ) {
     return res.status(400).send({ message: "Invalid sroName format" });
