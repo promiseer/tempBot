@@ -188,7 +188,10 @@ const generatePDF = async (page, tableSelector, filePath) => {
 
     const tableHTML = await page.evaluate((selector) => {
       const table = document.querySelector(selector);
-      return table ? table.outerHTML : "<p>Table not found</p>";
+      if (!table) {
+        throw new Error("Table not found");
+      }
+      return table.outerHTML;
     }, tableSelector);
 
     const finalHTML = htmlTemplate.replace(
