@@ -22,7 +22,7 @@ const initializeBrowser = async (options) => {
     saveSessionData: true, // Set to true to save session data
     caches: true, // Disable caching
     defaultViewport: null,
-    args: ["--start-maximized",'--no-sandbox', '--disable-setuid-sandbox'],
+    args: ["--start-maximized", "--no-sandbox", "--disable-setuid-sandbox"],
     ...options,
   });
 };
@@ -169,7 +169,7 @@ const generatePDF = async (page, tableSelector, filePath) => {
       }
 
       td, th {
-          border: 1px solid black;
+          border: 2px solid black;
           padding: 8px;
           margin-bottom: 0;
       }
