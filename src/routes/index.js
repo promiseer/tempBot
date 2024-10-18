@@ -18,8 +18,15 @@ router.post("/generate-ec", async (req, res) => {
     filePath,
   } = req.body;
 
-  if (!state || !caseId) {
+  if (!state || !caseId || !sroName) {
     return res.status(400).send({ message: "requestparameter not found" });
+  }
+
+  if (
+    (!Array.isArray(sroName) && !/^[A-Z]+?\(\d{3}\)$/.test(sroName)) ||
+    !sroName.length
+  ) {
+    return res.status(400).send({ message: "Invalid sroName format" });
   }
 
   if (!filePath || typeof filePath !== "string" || filePath.trim() === "") {
