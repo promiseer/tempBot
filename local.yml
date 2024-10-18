@@ -14,7 +14,7 @@ services:
       - redis # Ensure Redis starts before the Node app
     volumes:
       - .:/app
-    command: npm run dev
+    command: npm run start
 
   worker:
     build: 

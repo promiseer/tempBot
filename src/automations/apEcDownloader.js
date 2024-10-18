@@ -9,6 +9,7 @@ const {
   puppeteerInstance,
   elementFinder,
   generatePDF,
+  delay,
 } = require("../../utils/pupeteer");
 const fs = require("fs");
 
@@ -157,6 +158,23 @@ const selectSRO = async (page, sroList) => {
   // logger.info(`Selected SRO values: ${JSON.stringify(sroList[0])}`);
 };
 
+const handleSRONames = async (page, selector, sroName) => {
+  // Check if sroName is an array
+  if (Array.isArray(sroName)) {
+    // Iterate over each SRO and call dropDownSelector
+    for (let sro of sroName) {
+      await dropDownSelector(page, selector, sro); // Handle multiple SROs
+      await delay(1000);
+    }
+  } else {
+    // Handle single SRO
+    await dropDownSelector(page, selector, sroName);
+    await delay(1000);
+
+  }
+};
+
+
 // Search by None (without document number)
 const ScrapeByNone = async (
   page,
@@ -176,19 +194,12 @@ const ScrapeByNone = async (
 
     await page.waitForSelector("form");
     await dropDownSelector(page, ".react-select__input", district); //select district
-    await page.waitForResponse(
-      (response) =>
-        response.url() ===
-          "https://registration.ec.ap.gov.in/ecSearchAPI/v1/public/getSroList" &&
-        response.status() === 200
+
+    await responseValidator(
+      page,
+      "https://registration.ec.ap.gov.in/ecSearchAPI/v1/public/getSroList"
     );
-    if (Array.isArray(sroName)) {
-      for (let sro of sroName) {
-        await dropDownSelector(page, "#react-select-3-input", sro); // Handle multiple SROs
-      }
-    } else {
-      await dropDownSelector(page, "#react-select-3-input", sroName); // Handle single SRO
-    }
+    await handleSRONames(page, "#react-select-3-input", sroName);
 
     await fillInput(
       page,
@@ -202,6 +213,7 @@ const ScrapeByNone = async (
       await fillSurveyDetails(page, surveyNo, village);
     }
 
+    await delay(1000);
     await submitAndValidateCaptcha(page);
 
     const docs = await responseValidator(
