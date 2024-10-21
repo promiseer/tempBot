@@ -34,7 +34,14 @@ const handleNavigationError = async (fn, ...args) => {
 };
 
 // Search by Document Number
-const searchByDocumentNumber = async (page, url, docNo, docYear, sroName) => {
+const searchByDocumentNumber = async (
+  page,
+  url,
+  docNo,
+  docYear,
+  sroName,
+  multipleSros
+) => {
   try {
     await page.goto(url, { waitUntil: "networkidle0" });
     await page.waitForSelector("#encumbranceServiceForm");
@@ -78,7 +85,9 @@ const searchByDocumentNumber = async (page, url, docNo, docYear, sroName) => {
       page,
       "https://registration.ec.ap.gov.in/ecSearchAPI/v1/public/getPropertiesByDocNumAndSroCodeAndRegYear"
     );
-    const sroList = propertyList.data.drSroList.map((item) => item.srname);
+    const sroList = multipleSros?.length
+      ? multipleSros
+      : propertyList.data.drSroList.map((item) => item.srname);
 
     // Continue to next steps
     await handleSecondForm(page, sroList);
@@ -170,10 +179,8 @@ const handleSRONames = async (page, selector, sroName) => {
     // Handle single SRO
     await dropDownSelector(page, selector, sroName);
     await delay(1000);
-
   }
 };
-
 
 // Search by None (without document number)
 const ScrapeByNone = async (
@@ -303,7 +310,7 @@ const apEcDownloader = async ({
   docNo,
   docYear,
   sroName,
-  State,
+  multipleSros,
   ownerName,
   houseNo,
   surveyNo,
@@ -324,7 +331,8 @@ const apEcDownloader = async ({
         "https://registration.ec.ap.gov.in/ecSearch",
         docNo,
         docYear,
-        sroName
+        sroName,
+        multipleSros
       );
     } else {
       logger.info("..searching without documentNo ");
