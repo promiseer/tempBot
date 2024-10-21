@@ -1,6 +1,6 @@
 
 services:
-  backend:
+  backend: &backend
     build: 
       context: .
       dockerfile: ./compose/local/Dockerfile
@@ -17,15 +17,13 @@ services:
     command: npm run start
 
   worker:
-    build: 
-      context: .
-      dockerfile: ./compose/local/Dockerfile
-
+    <<: *backend
     container_name: botomation_worker
     restart: always
     environment:
       - REDIS_URL=redis://redis:6379
-
+    ports:
+      - "3001:3001"
     depends_on:
       - redis
       - backend
@@ -34,5 +32,14 @@ services:
     command: npm run worker # This runs the worker script
 
   redis:
+    container_name: redis
     image: redis:6
+    restart: unless-stopped
+    volumes:
+      - redis-data:/data # Use a volume for data persistence
+      - ./compose/local/redis.conf:/usr/local/etc/redis/redis.conf # Mount the custom redis.conf
+    command: ["redis-server", "/usr/local/etc/redis/redis.conf"] # Use the custom config file
 
+
+volumes:
+  redis-data:
