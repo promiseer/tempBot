@@ -41,24 +41,22 @@ router.post("/generate-ec", async (req, res) => {
   try {
     const jobIds = await Promise.all(
       encumbranceTypes.map(async (encumbranceType) => {
-        const job = await Queue.add(
-          {
-            encumbranceType,
-            state,
-            caseId,
-            docNo,
-            docYear,
-            sroName,
-            multipleSros,
-            ownerName,
-            houseNo,
-            surveyNo,
-            village,
-            wardBlock,
-            district,
-            filePath,
-          }
-        );
+        const job = await Queue.add({
+          encumbranceType,
+          state,
+          caseId,
+          docNo,
+          docYear,
+          sroName,
+          multipleSros,
+          ownerName,
+          houseNo,
+          surveyNo,
+          village,
+          wardBlock,
+          district,
+          filePath,
+        });
         return job.id;
       })
     );
@@ -77,25 +75,29 @@ router.post("/generate-ec", async (req, res) => {
 });
 
 // API endpoint to check job status
-router.get("/JobStatus/:jobId", async (req, res) => {
-  const { jobId } = req.params;
-  if (!jobId) return res.send({ message: "params not found" });
-  const job = await Queue.getJob(jobId);
-  logger.info(job);
-  if (!job) {
-    return res.status(404).json({ error: "Job not found." });
+router.post("/JobStatus/", async (req, res) => {
+  const { jobIds } = req.body;
+  if (!jobIds || !Array.isArray(jobIds) || jobIds.length === 0) {
+    return res.status(400).json({ error: "No job IDs found" });
   }
+  const jobs = await Promise.all(
+    jobIds.map(async (jobId) => {
+      const job = await Queue.getJob(jobId);
+      logger.info(job);
 
-  const state = await job.getState();
+      if (!job) {
+        return { jobId, error: "Job not found" };
+      }
+
+      const state = await job.getState();
+      return { jobId, state, jobDetails: job }; // Return jobId, state, and job details
+    })
+  );
+
   res.status(200).send({
     ok: 1,
     data: {
-      id: job.id,
-      state,
-      progress: job._progress,
-      attempts: job.attemptsMade,
-      timestamp: job.timestamp,
-      data: job.data,
+      jobs,
     },
   });
 });
