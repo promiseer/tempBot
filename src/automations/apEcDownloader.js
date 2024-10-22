@@ -35,6 +35,7 @@ const handleNavigationError = async (fn, ...args) => {
 
 // Search by Document Number
 const searchByDocumentNumber = async (
+  encumbranceType,
   page,
   url,
   docNo,
@@ -80,17 +81,8 @@ const searchByDocumentNumber = async (
     await clickButton(page, '#encumbranceServiceForm button[type="submit"]');
     logger.info("Logged in successfully");
 
-    // Validate response and get property list
-    const propertyList = await responseValidator(
-      page,
-      "https://registration.ec.ap.gov.in/ecSearchAPI/v1/public/getPropertiesByDocNumAndSroCodeAndRegYear"
-    );
-    const sroList = multipleSros?.length
-      ? multipleSros
-      : propertyList.data.drSroList.map((item) => item.srname);
-
     // Continue to next steps
-    await handleSecondForm(page, sroList);
+    await handleSecondForm(page, encumbranceType, multipleSros);
     await page.waitForNavigation();
 
     const filePath = await generatePDF(
@@ -104,21 +96,21 @@ const searchByDocumentNumber = async (
   } catch (error) {
     logger.error("Error in searchByDocumentNumber:", error.message);
     throw error;
-
-    //   return handleNavigationError(
-    //     searchByDocumentNumber,
-    //     page,
-    //     url,
-    //     docNo,
-    //     yearOfRegistration,
-    //     sroName
-    //   );
   }
 };
 
 // Handle the second form submission
-const handleSecondForm = async (page, sroList) => {
+const handleSecondForm = async (page, encumbranceType, multipleSros) => {
   try {
+    // Validate response and get property list
+    await responseValidator(
+      page,
+      "https://registration.ec.ap.gov.in/ecSearchAPI/v1/public/getPropertiesByDocNumAndSroCodeAndRegYear"
+    );
+
+    const sroList =
+      encumbranceType === "ENCUMBRANCE_TYPE.DNMS" ? multipleSros : [];
+
     // Click NEXT button after first form submission
     await clickButton(page, "button.btn.btn-primary.btn-sm");
     logger.info("2nd Form submitted successfully!");
@@ -144,8 +136,10 @@ const handleSecondForm = async (page, sroList) => {
     }
     await page.type('form input[name="captchaVal"]', captchaText);
 
-    // Select SRO values
-    await selectSRO(page, sroList);
+    // Select MultipleSRO values
+    if (sroList.length) {
+      await selectSRO(page, sroList);
+    }
 
     // Submit form and proceed to download
     await clickButton(page, 'form button[type="submit"]');
@@ -161,10 +155,8 @@ const selectSRO = async (page, sroList) => {
   await page.click("div.react-select__control"); // Focus on the dropdown
 
   for (let sro of sroList.slice(0, 2)) {
-    //first 2 SROS only
     await dropDownSelector(page, "input.react-select__input", sro);
   }
-  // logger.info(`Selected SRO values: ${JSON.stringify(sroList[0])}`);
 };
 
 const handleSRONames = async (page, selector, sroName) => {
@@ -184,6 +176,7 @@ const handleSRONames = async (page, selector, sroName) => {
 
 // Search by None (without document number)
 const ScrapeByNone = async (
+  encumbranceType,
   page,
   url,
   surveyNo,
@@ -193,6 +186,7 @@ const ScrapeByNone = async (
   block,
   district,
   sroName,
+  multipleSros,
   ownerName
 ) => {
   let filePath;
@@ -206,7 +200,11 @@ const ScrapeByNone = async (
       page,
       "https://registration.ec.ap.gov.in/ecSearchAPI/v1/public/getSroList"
     );
-    await handleSRONames(page, "#react-select-3-input", sroName);
+    if (["ENCUMBRANCE_TYPE.HNMS"].includes(encumbranceType)) {
+      await handleSRONames(page, "#react-select-3-input", multipleSros);
+    } else {
+      await handleSRONames(page, "#react-select-3-input", sroName);
+    }
 
     await fillInput(
       page,
@@ -214,9 +212,19 @@ const ScrapeByNone = async (
       ownerName ? ownerName : "."
     ); //applicant name
 
-    if (houseNo) {
+    if (
+      ["ENCUMBRANCE_TYPE.HNOS", "ENCUMBRANCE_TYPE.HNMS"].includes(
+        encumbranceType
+      )
+    ) {
       await fillBuildingDetails(page, surveyNo, houseNo, ward, block, village); //@todo: add alias if required
-    } else {
+    }
+
+    if (
+      ["ENCUMBRANCE_TYPE.SNOS", "ENCUMBRANCE_TYPE.ASNOS"].includes(
+        encumbranceType
+      )
+    ) {
       await fillSurveyDetails(page, surveyNo, village);
     }
 
@@ -251,13 +259,6 @@ const ScrapeByNone = async (
     return filePath;
   } catch (error) {
     throw error;
-
-    //   return handleNavigationError(
-    //     ScrapeByNone,
-    //     page,
-    //     url,
-    //     searchByBuildingDetails
-    //   );
   }
 };
 
@@ -318,37 +319,51 @@ const apEcDownloader = async ({
   ward,
   block,
   district,
+  encumbranceType,
 }) => {
   const browser = await puppeteerInstance();
   const page = await browser.newPage();
   logger.info(":: Automation Started");
   let filePath;
   try {
-    if (docNo) {
-      logger.info("...searching by documentNo ");
-      filePath = await searchByDocumentNumber(
-        page,
-        "https://registration.ec.ap.gov.in/ecSearch",
-        docNo,
-        docYear,
-        sroName,
-        multipleSros
-      );
-    } else {
-      logger.info("..searching without documentNo ");
+    console.log(encumbranceType);
+    switch (encumbranceType) {
+      case "ENCUMBRANCE_TYPE.DNOS":
+      case "ENCUMBRANCE_TYPE.DNMS":
+        filePath = await searchByDocumentNumber(
+          encumbranceType,
+          page,
+          "https://registration.ec.ap.gov.in/ecSearch",
+          docNo,
+          docYear,
+          sroName,
+          multipleSros
+        );
 
-      filePath = await ScrapeByNone(
-        page,
-        "https://registration.ec.ap.gov.in/ecSearch/EncumbranceSearch",
-        surveyNo,
-        village,
-        houseNo,
-        ward,
-        block,
-        district,
-        sroName,
-        ownerName
-      );
+        break;
+      case "ENCUMBRANCE_TYPE.HNOS":
+      case "ENCUMBRANCE_TYPE.HNMS":
+      case "ENCUMBRANCE_TYPE.SNOS":
+      case "ENCUMBRANCE_TYPE.ASNOS":
+        filePath = await ScrapeByNone(
+          encumbranceType,
+          page,
+          "https://registration.ec.ap.gov.in/ecSearch/EncumbranceSearch",
+          surveyNo,
+          village,
+          houseNo,
+          ward,
+          block,
+          district,
+          sroName,
+          multipleSros,
+          ownerName
+        );
+        break;
+
+      default:
+        logger.info("Invalid encumbranceType! ");
+        break;
     }
 
     await browser.close();

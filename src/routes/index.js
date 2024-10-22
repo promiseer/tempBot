@@ -17,17 +17,20 @@ router.post("/generate-ec", async (req, res) => {
     wardBlock,
     district,
     filePath,
+    encumbranceTypes,
   } = req.body;
 
-  if (!state || !caseId || !sroName) {
-    return res.status(400).send({ message: "requestparameter not found" });
-  }
-
   if (
-    (!Array.isArray(sroName) && !/^[A-Z]+(?:\([A-Z0-9.]+\)|\(\d{3}\))+$/.test(sroName)) ||
-    !sroName.length
+    !state ||
+    !caseId ||
+    !docNo ||
+    !docYear ||
+    !district ||
+    !sroName ||
+    !multipleSros.length ||
+    !encumbranceTypes.length
   ) {
-    return res.status(400).send({ message: "Invalid sroName format" });
+    return res.status(400).send({ message: "requestparameter not found" });
   }
 
   if (!filePath || typeof filePath !== "string" || filePath.trim() === "") {
@@ -36,35 +39,37 @@ router.post("/generate-ec", async (req, res) => {
     );
   }
   try {
-    const job = await Queue.add(
-      {
-        state,
-        caseId,
-        docNo,
-        docYear,
-        sroName,
-        multipleSros,
-        ownerName,
-        houseNo,
-        surveyNo,
-        village,
-        wardBlock,
-        district,
-        filePath,
-      },
-      {
-        attempts: 3, // Retry job 3 times on failure
-        removeOnComplete: true, // Automatically remove job after completion
-        removeOnFail: 1000, // Keep 1000 failed jobs before deleting old ones
-      }
+    const jobIds = await Promise.all(
+      encumbranceTypes.map(async (encumbranceType) => {
+        const job = await Queue.add(
+          {
+            encumbranceType,
+            state,
+            caseId,
+            docNo,
+            docYear,
+            sroName,
+            multipleSros,
+            ownerName,
+            houseNo,
+            surveyNo,
+            village,
+            wardBlock,
+            district,
+            filePath,
+          }
+        );
+        return job.id;
+      })
     );
-    if (!job) {
+
+    if (!jobIds.length) {
       throw new Error(
         "Failed to add job to the queue: Queue might not be running."
       );
     }
 
-    res.status(201).json({ ok: 1, data: { jobId: job.id } });
+    res.status(201).json({ ok: 1, data: { jobIds } });
   } catch (error) {
     console.error(`Failed to add job to the queue: ${error.message}`);
     res.status(500).send({ message: error.message });

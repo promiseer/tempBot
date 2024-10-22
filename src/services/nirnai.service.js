@@ -57,6 +57,7 @@ const createAttachement = async (caseId, file) => {
             docSource: null,
             notify: true,
             inReport: false,
+            isBot:true
           },
         ],
       },
