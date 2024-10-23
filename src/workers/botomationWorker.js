@@ -21,7 +21,7 @@ Queue.on("stalled", (job) => {
 
 Queue.process(async (job) => {
   const { queue, data, id } = job;
-  const { state, caseId, filePath: fileDestination } = data;
+  const { state, caseId, filePath: fileDestination, encumbranceType } = data;
 
   logger.info(`Received job for queue: ${queue.name} and Job ID:${id}`);
 
@@ -38,7 +38,7 @@ Queue.process(async (job) => {
           const { filePath } = await apEcDownloader(data);
           if (filePath) {
             const file = await uploadFileGC(fileDestination, filePath);
-            await createAttachement(caseId, file);
+            await createAttachement(caseId, file, encumbranceType);
             await deleteFile(filePath);
             logger.info(
               `Successfully processed ANDHRA PRADESH with Job ID:${id} `

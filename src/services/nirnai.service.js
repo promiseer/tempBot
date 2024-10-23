@@ -34,7 +34,7 @@ const getToken = async () => {
   }
 };
 
-const createAttachement = async (caseId, file) => {
+const createAttachement = async (caseId, file,  encumbranceType) => {
   if (!caseId || !file) {
     logger.error("requested parameters not found");
     throw new Error("requested parameters not found");
@@ -57,7 +57,8 @@ const createAttachement = async (caseId, file) => {
             docSource: null,
             notify: true,
             inReport: false,
-            isBot:true
+            isBot:true,
+            encumbranceType
           },
         ],
       },
