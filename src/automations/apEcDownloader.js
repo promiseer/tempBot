@@ -318,6 +318,7 @@ const ScrapeByNone = async (
         "ENCUMBRANCE_TYPE.HNOS",
         "ENCUMBRANCE_TYPE.HNMS",
         "ENCUMBRANCE_TYPE.SHNOS",
+        "ENCUMBRANCE_TYPE.SHNMS",
         "ENCUMBRANCE_TYPE.SNOS",
         "ENCUMBRANCE_TYPE.SSNMS",
       ].includes(encumbranceType)
