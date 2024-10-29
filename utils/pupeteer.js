@@ -20,7 +20,7 @@ const puppeteerInstance = async (options = {}) => {
 
 const initializeBrowser = async (options) => {
   return await puppeteer.launch({
-    headless: true,
+    headless: false,
     timeout: 30000, // Adjust timeout as needed
     saveSessionData: true, // Set to true to save session data
     caches: true, // Disable caching
@@ -189,7 +189,7 @@ const generatePDF = async (page, tableSelector, filePath) => {
 </body>
 </html>`;
 
-    const getTableHTML = async () => {
+    const getTableHTML = async (retryCount = 3) => {
       try {
         return await page.evaluate((selector) => {
           const table = document.querySelector(selector);
@@ -199,9 +199,15 @@ const generatePDF = async (page, tableSelector, filePath) => {
           return table.outerHTML;
         }, tableSelector);
       } catch (error) {
-        console.log("Retrying table extraction...");
-        await delay(2000)
-        return getTableHTML(); // Recursive retry
+        if (retryCount > 0) {
+          console.log(
+            `Retrying table extraction... Attempts left: ${retryCount}`
+          );
+          await delay(2000); // Wait 2 seconds before retrying
+          return getTableHTML(retryCount - 1); // Recursive retry with decremented counter
+        } else {
+          throw new Error("Table extraction failed after 3 retries");
+        }
       }
     };
 
