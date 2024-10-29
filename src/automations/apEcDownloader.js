@@ -47,8 +47,9 @@ const searchByDocumentNumber = async (
   docNoIdentifier
 ) => {
   try {
-    await page.goto(url, { waitUntil: "networkidle0" });
-
+    await page.goto("https://registration.ec.ap.gov.in/ecSearch", {
+      waitUntil: "networkidle0",
+    });
 
     await page.waitForSelector("#encumbranceServiceForm");
 
@@ -281,8 +282,10 @@ const ScrapeByNone = async (
 ) => {
   let filePath;
   try {
-    await page.goto(url, { waitUntil: "networkidle0" });
-
+    await page.goto(
+      "https://registration.ec.ap.gov.in/ecSearch/EncumbranceSearch",
+      { waitUntil: "networkidle0" }
+    );
 
     await page.waitForSelector("form");
     await dropDownSelector(page, ".react-select__input", district); //select district
