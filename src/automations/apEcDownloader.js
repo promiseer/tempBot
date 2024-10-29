@@ -175,7 +175,7 @@ const handleMultipleSro = async (
     }
   }
   const filePaths = await Promise.all(tasks);
-  const filePath = await mergePDFs(filePaths, docNo);
+  const filePath = await mergePDFs(filePaths, `Public/Downloads/${docNo}.pdf`);
   return filePath;
 };
 

@@ -248,7 +248,7 @@ async function mergePDFs(pdfPaths, outputPath) {
 
     // Save the merged PDF as bytes and write to the output file
     const mergedPdfBytes = await mergedPdf.save();
-    fs.writeFileSync(`Public/Downloads/${outputPath}.pdf`, mergedPdfBytes);
+    fs.writeFileSync(outputPath, mergedPdfBytes);
     logger.info(`Merged PDF saved to ${outputPath}`);
     return outputPath;
   } catch (error) {
