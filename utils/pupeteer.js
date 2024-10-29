@@ -1,6 +1,9 @@
 const puppeteer = require("puppeteer");
 const fs = require("fs");
 const logger = require("./logger");
+const { PDFDocument } = require("pdf-lib");
+const { deleteFile } = require("./deleteFile");
+
 const puppeteerInstance = async (options = {}) => {
   try {
     const browser = await initializeBrowser(options);
@@ -17,7 +20,7 @@ const puppeteerInstance = async (options = {}) => {
 
 const initializeBrowser = async (options) => {
   return await puppeteer.launch({
-    headless: true,
+    headless: false,
     timeout: 30000, // Adjust timeout as needed
     saveSessionData: true, // Set to true to save session data
     caches: true, // Disable caching
@@ -208,6 +211,42 @@ const generatePDF = async (page, tableSelector, filePath) => {
   }
 };
 
+// Merge PDFs
+async function mergePDFs(pdfPaths, outputPath) {
+  try {
+    // Create a new PDF document to hold the merged content
+    const mergedPdf = await PDFDocument.create();
+    const pdfOnlyPaths = pdfPaths.filter((path) => path.endsWith(".pdf"));
+
+    if (pdfOnlyPaths.length === 0) {
+      logger.info("No valid PDF files found to merge.");
+      return null;
+    }
+
+    // Iterate over the paths of PDFs to merge
+    for (const pdfPath of pdfOnlyPaths) {
+      // Load each PDF
+      logger.info(pdfPath);
+
+      const pdfBytes = fs.readFileSync(pdfPath);
+      const pdf = await PDFDocument.load(pdfBytes);
+
+      // Copy each page to the merged PDF
+      const copiedPages = await mergedPdf.copyPages(pdf, pdf.getPageIndices());
+      copiedPages.forEach((page) => mergedPdf.addPage(page));
+      await deleteFile(pdfPath);
+    }
+
+    // Save the merged PDF as bytes and write to the output file
+    const mergedPdfBytes = await mergedPdf.save();
+    fs.writeFileSync(`Public/Downloads/${outputPath}.pdf`, mergedPdfBytes);
+    logger.info(`Merged PDF saved to ${outputPath}`);
+    return outputPath;
+  } catch (error) {
+    logger.error(`Error:${error.message}`);
+  }
+}
+
 module.exports = {
   puppeteerInstance,
   dropDownSelector,
@@ -221,4 +260,5 @@ module.exports = {
   delay,
   elementFinder,
   generatePDF,
+  mergePDFs,
 };

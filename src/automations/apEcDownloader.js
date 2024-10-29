@@ -10,26 +10,28 @@ const {
   elementFinder,
   generatePDF,
   delay,
+  mergePDFs,
 } = require("../../utils/pupeteer");
-const fs = require("fs");
 
 // Helper function for navigation error handling
 const handleNavigationError = async (fn, ...args) => {
-  try {
-    return await fn(...args);
-  } catch (error) {
-    if (error.message.includes("Navigation timeout of")) {
-      logger.error(
-        "ERROR TimeoutError: Navigation timeout of 30000 ms exceeded, retrying..."
-      );
-      return fn(...args); // Retry on timeout
+  const maxRetries = 3;
+  let attempts = 0;
+  while (attempts < maxRetries) {
+    try {
+      if (typeof fn !== "function") {
+        throw new Error("Provided argument is not a function");
+      }
+      return await fn(...args);
+    } catch (error) {
+      attempts++;
+      console.error(`Attempt ${attempts} failed:`, error.message);
+      if (attempts >= maxRetries) {
+        console.error("Max retries reached:", error.message);
+        throw error;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 1000 * attempts)); // Exponential backoff
     }
-    if (error.message.includes("ERR_NAME_NOT_RESOLVED")) {
-      logger.error("ERROR: Check your internet connection.");
-      process.exit(1); // Exit on connection issue
-    }
-    logger.error("ERROR: ", error.message);
-    throw error;
   }
 };
 
@@ -37,14 +39,17 @@ const handleNavigationError = async (fn, ...args) => {
 const searchByDocumentNumber = async (
   encumbranceType,
   page,
-  url,
   docNo,
   docYear,
   sroName,
-  multipleSros
+  multipleSros,
+  startDate,
+  docNoIdentifier
 ) => {
   try {
     await page.goto(url, { waitUntil: "networkidle0" });
+
+
     await page.waitForSelector("#encumbranceServiceForm");
 
     // Select 'Document Number' in the dropdown
@@ -82,15 +87,23 @@ const searchByDocumentNumber = async (
     logger.info("Logged in successfully");
 
     // Continue to next steps
-    await handleSecondForm(page, encumbranceType, multipleSros);
+    // if (encumbranceType == "ENCUMBRANCE_TYPE.DNMS") {
+    //   return await handleMultipleSro(
+    //     page,
+    //     encumbranceType,
+    //     multipleSros,
+    //     startDate
+    //   );
+    // }
+
+    await handleSecondForm(page, encumbranceType, multipleSros, startDate);
     await page.waitForNavigation();
 
     const filePath = await generatePDF(
       page,
       "#__next > div > div:nth-child(2) > div > div.container > div:nth-child(2) > div > table",
-      `Public/Downloads/AP-EncumbranceCertificate-document-by-doc-${docNo}`
+      `Public/Downloads/${docNoIdentifier}`
     );
-    await page.close();
 
     return filePath;
   } catch (error) {
@@ -99,8 +112,79 @@ const searchByDocumentNumber = async (
   }
 };
 
+const handleMultipleSro = async (
+  encumbranceType,
+  page,
+  sroName,
+  multipleSros,
+  ownerName,
+  startDate,
+  docNo,
+  docYear,
+  surveyNo,
+  village,
+  houseNo,
+  ward,
+  block,
+  district
+) => {
+  const tasks = [];
+
+  for (let i = 0; i < multipleSros?.length; i += 2) {
+    const sroPair = multipleSros.slice(i, i + 2);
+    if (["ENCUMBRANCE_TYPE.DNMS"].includes(encumbranceType)) {
+      tasks.push(
+        await searchByDocumentNumber(
+          encumbranceType,
+          page,
+          docNo,
+          docYear,
+          sroName,
+          sroPair, // Pass individual SRO from the pair
+          startDate,
+          `${docNo}-${i}` // Unique identifier for each task
+        )
+      );
+    }
+    if (
+      [
+        "ENCUMBRANCE_TYPE.HNMS",
+        "ENCUMBRANCE_TYPE.SHNMS",
+        "ENCUMBRANCE_TYPE.SSNMS",
+        "ENCUMBRANCE_TYPE.SASNMS",
+      ].includes(encumbranceType)
+    ) {
+      tasks.push(
+        await ScrapeByNone(
+          encumbranceType,
+          page,
+          surveyNo,
+          village,
+          houseNo,
+          ward,
+          block,
+          district,
+          sroName,
+          sroPair,
+          ownerName,
+          startDate,
+          `${docNo}-${i}` // Unique identifier for each task
+        )
+      );
+    }
+  }
+  const filePaths = await Promise.all(tasks);
+  const filePath = await mergePDFs(filePaths, docNo);
+  return filePath;
+};
+
 // Handle the second form submission
-const handleSecondForm = async (page, encumbranceType, multipleSros) => {
+const handleSecondForm = async (
+  page,
+  encumbranceType,
+  multipleSros,
+  startDate
+) => {
   try {
     // Validate response and get property list
     await responseValidator(
@@ -116,7 +200,13 @@ const handleSecondForm = async (page, encumbranceType, multipleSros) => {
     logger.info("2nd Form submitted successfully!");
 
     await page.waitForSelector("form");
+    await delay(1000);
     await page.type('form input[name="applicantName"]', ".");
+    await delay(1000);
+
+    startDate
+      ? await page.type('form input[name="periodOfSearchFrom"]', startDate)
+      : logger.info("Skipping Date input as it's empty");
 
     // Get new CAPTCHA text and fill it
     const captchaText = await getCaptchaText(
@@ -178,7 +268,6 @@ const handleSRONames = async (page, selector, sroName) => {
 const ScrapeByNone = async (
   encumbranceType,
   page,
-  url,
   surveyNo,
   village,
   houseNo,
@@ -187,11 +276,13 @@ const ScrapeByNone = async (
   district,
   sroName,
   multipleSros,
-  ownerName
+  ownerName,
+  startDate
 ) => {
   let filePath;
   try {
     await page.goto(url, { waitUntil: "networkidle0" });
+
 
     await page.waitForSelector("form");
     await dropDownSelector(page, ".react-select__input", district); //select district
@@ -200,11 +291,18 @@ const ScrapeByNone = async (
       page,
       "https://registration.ec.ap.gov.in/ecSearchAPI/v1/public/getSroList"
     );
-    if (["ENCUMBRANCE_TYPE.HNMS"].includes(encumbranceType)) {
-      await handleSRONames(page, "#react-select-3-input", multipleSros);
-    } else {
-      await handleSRONames(page, "#react-select-3-input", sroName);
-    }
+    await handleSRONames(
+      page,
+      "#react-select-3-input",
+      [
+        "ENCUMBRANCE_TYPE.HNMS",
+        "ENCUMBRANCE_TYPE.SHNMS",
+        "ENCUMBRANCE_TYPE.SSNMS",
+        "ENCUMBRANCE_TYPE.SASNMS",
+      ].includes(encumbranceType)
+        ? multipleSros
+        : sroName
+    );
 
     await fillInput(
       page,
@@ -213,19 +311,39 @@ const ScrapeByNone = async (
     ); //applicant name
 
     if (
-      ["ENCUMBRANCE_TYPE.HNOS", "ENCUMBRANCE_TYPE.HNMS"].includes(
-        encumbranceType
-      )
+      [
+        "ENCUMBRANCE_TYPE.HNOS",
+        "ENCUMBRANCE_TYPE.HNMS",
+        "ENCUMBRANCE_TYPE.SHNOS",
+        "ENCUMBRANCE_TYPE.SNOS",
+        "ENCUMBRANCE_TYPE.SSNMS",
+      ].includes(encumbranceType)
     ) {
-      await fillBuildingDetails(page, surveyNo, houseNo, ward, block, village); //@todo: add alias if required
+      await fillBuildingDetails(
+        page,
+        sroName,
+        surveyNo,
+        houseNo,
+        ward,
+        block,
+        village,
+        startDate,
+        encumbranceType
+      ); //@todo: add alias if required
     }
 
     if (
-      ["ENCUMBRANCE_TYPE.SNOS", "ENCUMBRANCE_TYPE.ASNOS"].includes(
+      ["ENCUMBRANCE_TYPE.SASNMS", "ENCUMBRANCE_TYPE.ASNOS"].includes(
         encumbranceType
       )
     ) {
-      await fillSurveyDetails(page, surveyNo, village);
+      await fillSurveyDetails(
+        page,
+        surveyNo,
+        village,
+        encumbranceType,
+        startDate
+      );
     }
 
     await delay(1000);
@@ -255,7 +373,6 @@ const ScrapeByNone = async (
       `Public/Downloads/AP-EncumbranceCertificate-document-without-docNumber`
     );
 
-    await page.close();
     return filePath;
   } catch (error) {
     throw error;
@@ -265,15 +382,26 @@ const ScrapeByNone = async (
 // Fill the building details form
 const fillBuildingDetails = async (
   page,
+  sroName,
   surveyNo,
   houseNo,
   ward,
   block,
   village,
-  alias
+  startDate,
+  encumbranceType
 ) => {
+  await fillInput(
+    page,
+    'input[name="houseNo"]',
+    ["ENCUMBRANCE_TYPE.SNOS", "ENCUMBRANCE_TYPE.SSNMS"].includes(
+      encumbranceType
+    )
+      ? houseNo.split("/")[0]
+      : houseNo
+  );
+
   await fillInput(page, 'input[name="inSurveyNo"]', surveyNo);
-  await fillInput(page, 'input[name="houseNo"]', houseNo);
   ward
     ? await fillInput(page, 'input[name="wardNo"]', ward)
     : logger.info("Skipping ward no input as it's empty");
@@ -281,17 +409,32 @@ const fillBuildingDetails = async (
     ? await fillInput(page, 'input[name="blockNo"]', block)
     : logger.info("Skipping block no input as it's empty");
   await fillInput(page, 'input[name="villageOrCity"]', village);
-  alias
-    ? await fillInput(page, 'input[name="alias"]', alias)
+  sroName
+    ? await fillInput(page, 'input[name="alias"]', sroName)
     : logger.info("Skipping Alias input as it's empty");
+
+  startDate
+    ? await page.type('input[name="periodOfSearchFrom"]', startDate)
+    : logger.info("Skipping Date input as it's empty");
 };
 
-// Fill the survey details form
-const fillSurveyDetails = async (page, survey, village) => {
+// Fill the survey details form for Sites or Agricultural Lands
+const fillSurveyDetails = async (
+  page,
+  survey,
+  village,
+  encumbranceType,
+  startDate
+) => {
   await clickButton(page, '.form-check-input[value="BS"]');
   await clickButton(page, '.form-check-input[value="SAL"]');
-  await fillInput(page, 'input[name="inSurveyNo"]', survey);
+  ["ENCUMBRANCE_TYPE.SASNMS"].includes(encumbranceType)
+    ? await fillInput(page, 'input[name="inSurveyNo"]', survey.split("/")[0])
+    : await fillInput(page, 'input[name="inSurveyNo"]', survey);
   await fillInput(page, 'input[name="revenueVillage"]', village);
+  startDate
+    ? await page.type('input[name="periodOfSearchFrom"]', startDate)
+    : logger.info("Skipping Date input as it's empty");
 };
 
 // Submit form and fill CAPTCHA
@@ -320,35 +463,50 @@ const apEcDownloader = async ({
   block,
   district,
   encumbranceType,
+  startDate,
 }) => {
   const browser = await puppeteerInstance();
   const page = await browser.newPage();
   logger.info(":: Automation Started");
   let filePath;
   try {
-    console.log(encumbranceType);
     switch (encumbranceType) {
       case "ENCUMBRANCE_TYPE.DNOS":
-      case "ENCUMBRANCE_TYPE.DNMS":
         filePath = await searchByDocumentNumber(
           encumbranceType,
           page,
-          "https://registration.ec.ap.gov.in/ecSearch",
           docNo,
           docYear,
           sroName,
-          multipleSros
+          multipleSros,
+          startDate,
+          docNo //docIdentifier
         );
+        await page.close();
+
+        break;
+
+      case "ENCUMBRANCE_TYPE.DNMS":
+        filePath = await handleMultipleSro(
+          encumbranceType,
+          page,
+          sroName,
+          multipleSros,
+          ownerName,
+          startDate,
+          docNo,
+          docYear
+        );
+        await page.close();
 
         break;
       case "ENCUMBRANCE_TYPE.HNOS":
-      case "ENCUMBRANCE_TYPE.HNMS":
+      case "ENCUMBRANCE_TYPE.SHNOS":
       case "ENCUMBRANCE_TYPE.SNOS":
       case "ENCUMBRANCE_TYPE.ASNOS":
         filePath = await ScrapeByNone(
           encumbranceType,
           page,
-          "https://registration.ec.ap.gov.in/ecSearch/EncumbranceSearch",
           surveyNo,
           village,
           houseNo,
@@ -357,8 +515,35 @@ const apEcDownloader = async ({
           district,
           sroName,
           multipleSros,
-          ownerName
+          ownerName,
+          startDate
         );
+        await page.close();
+
+        break;
+
+      case "ENCUMBRANCE_TYPE.HNMS":
+      case "ENCUMBRANCE_TYPE.SHNMS":
+      case "ENCUMBRANCE_TYPE.SSNMS":
+      case "ENCUMBRANCE_TYPE.SASNMS":
+        filePath = await handleMultipleSro(
+          encumbranceType,
+          page,
+          sroName,
+          multipleSros,
+          ownerName,
+          startDate,
+          docNo,
+          docYear,
+          surveyNo,
+          village,
+          houseNo,
+          ward,
+          block,
+          district
+        );
+        await page.close();
+
         break;
 
       default:
@@ -370,6 +555,7 @@ const apEcDownloader = async ({
     return { status: "ok", filePath };
   } catch (error) {
     logger.info(error.message);
+
     throw new Error(error.message);
   } finally {
     await browser.close();

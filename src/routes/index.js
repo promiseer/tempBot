@@ -18,6 +18,7 @@ router.post("/generate-ec", async (req, res) => {
     district,
     filePath,
     encumbranceTypes,
+    startDate
   } = req.body;
 
   if (
@@ -56,6 +57,7 @@ router.post("/generate-ec", async (req, res) => {
           wardBlock,
           district,
           filePath,
+          startDate
         });
         return job.id;
       })

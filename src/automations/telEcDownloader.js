@@ -157,10 +157,10 @@ const handlePostLogin = async (
     );
     await delay(3000);
 
-    // // await downloadPdf(
-    //   newPage,
-    //   "public/Downloads/TEL-EncumbranceCertificate-document"
-    // ); // Download the PDF
+    await downloadPdf(
+      newPage,
+      "public/Downloads/TEL-EncumbranceCertificate-document"
+    ); // Download the PDF
     await newPage.close();
   } catch (error) {
     logger.error("Post-login action error:", error);
