@@ -431,6 +431,7 @@ const fillSurveyDetails = async (
 ) => {
   await clickButton(page, '.form-check-input[value="BS"]');
   await clickButton(page, '.form-check-input[value="SAL"]');
+  await delay(2000)
   ["ENCUMBRANCE_TYPE.SASNMS"].includes(encumbranceType)
     ? await fillInput(page, 'input[name="inSurveyNo"]', survey.split("/")[0])
     : await fillInput(page, 'input[name="inSurveyNo"]', survey);

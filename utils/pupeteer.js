@@ -189,14 +189,23 @@ const generatePDF = async (page, tableSelector, filePath) => {
 </body>
 </html>`;
 
-    const tableHTML = await page.evaluate((selector) => {
-      const table = document.querySelector(selector);
-      if (!table) {
-        throw new Error("Table not found");
+    const getTableHTML = async () => {
+      try {
+        return await page.evaluate((selector) => {
+          const table = document.querySelector(selector);
+          if (!table) {
+            throw new Error("Table not found");
+          }
+          return table.outerHTML;
+        }, tableSelector);
+      } catch (error) {
+        console.log("Retrying table extraction...");
+        await delay(2000)
+        return getTableHTML(); // Recursive retry
       }
-      return table.outerHTML;
-    }, tableSelector);
+    };
 
+    const tableHTML = await getTableHTML();
     const finalHTML = htmlTemplate.replace(
       "<!-- Table will be appended here -->",
       tableHTML
