@@ -20,7 +20,7 @@ const puppeteerInstance = async (options = {}) => {
 
 const initializeBrowser = async (options) => {
   return await puppeteer.launch({
-    headless: false,
+    headless: true,
     timeout: 30000, // Adjust timeout as needed
     saveSessionData: true, // Set to true to save session data
     caches: true, // Disable caching
