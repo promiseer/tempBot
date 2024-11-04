@@ -282,6 +282,18 @@ const ScrapeByNone = async (
 ) => {
   let filePath;
   try {
+    if (
+      ["ENCUMBRANCE_TYPE.SNOS", "ENCUMBRANCE_TYPE.SSNMS"].includes(
+        encumbranceType
+      ) &&
+      typeof houseNo === "string" &&
+      houseNo?.trim() !== "" &&
+      houseNo !== undefined
+    ) {
+      logger.info("House No  found Skipping for SNOS ");
+      return "Public/Downloads/dummy.pdf";
+    }
+
     await page.goto(
       "https://registration.ec.ap.gov.in/ecSearch/EncumbranceSearch",
       { waitUntil: "networkidle0" }

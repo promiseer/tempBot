@@ -168,13 +168,18 @@ const generatePDF = async (page, tableSelector, filePath) => {
   <title>Extracted Table PDF</title>
   <style>
       table {
-          border-collapse: collapse;
+          border-collapse: collapse !important;;
       }
 
       td, th {
-          border: 2px solid black;
+          border: 2px solid black !important;;
           padding: 8px;
-          margin-bottom: 0;
+          margin-bottom: 0 ;
+          page-break-inside: avoid; /* Prevent row splitting across pages */
+
+      }
+      thead {
+          display: table-header-group; /* Repeat header on each page */
       }
 
       .centered-table {
@@ -210,14 +215,14 @@ const generatePDF = async (page, tableSelector, filePath) => {
         }
       }
     };
+    const htmlData =  fs.readFileSync("Public/Downloads/dummy.html")
 
     const tableHTML = await getTableHTML();
     const finalHTML = htmlTemplate.replace(
       "<!-- Table will be appended here -->",
       tableHTML
     );
-
-    await page.setContent(finalHTML); // Set the HTML content to the page
+    await page.setContent(htmlData.toString()); // Set the HTML content to the page
     await downloadPdf(page, filePath);
     return `${filePath}.pdf`;
   } catch (error) {
