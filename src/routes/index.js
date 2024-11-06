@@ -21,19 +21,12 @@ router.post("/generate-ec", async (req, res) => {
     startDate
   } = req.body;
 
-  if (
-    !state ||
-    !caseId ||
-    !docNo ||
-    !docYear ||
-    !district ||
-    !sroName ||
-    !multipleSros.length ||
-    !encumbranceTypes.length
-  ) {
-    return res.status(400).send({ message: "requestparameter not found" });
+  const requiredParams = { state, caseId, docNo, docYear, district, village, sroName, multipleSros, encumbranceTypes };
+  const missingParams = Object.keys(requiredParams).filter(param => !requiredParams[param] || (Array.isArray(requiredParams[param]) && !requiredParams[param].length));
+  
+  if (missingParams.length) {
+    return res.status(400).send({ message: `Missing parameters: ${missingParams.join(", ")}` });
   }
-
   if (!filePath || typeof filePath !== "string" || filePath.trim() === "") {
     throw new Error(
       "Invalid file path: fileDestination is either empty or not provided."
@@ -85,7 +78,7 @@ router.post("/JobStatus/", async (req, res) => {
   const jobs = await Promise.all(
     jobIds.map(async (jobId) => {
       const job = await Queue.getJob(jobId);
-      logger.info(job);
+      logger.info(`${job}`);
 
       if (!job) {
         return { jobId, error: "Job not found" };
