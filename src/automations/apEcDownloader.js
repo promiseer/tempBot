@@ -278,9 +278,11 @@ const ScrapeByNone = async (
   sroName,
   multipleSros,
   ownerName,
-  startDate
+  startDate,
+  docNoIdentifier
 ) => {
   let filePath;
+  let dummyFilePath = "Public/dummy/dummy.pdf";
   try {
     if (
       ["ENCUMBRANCE_TYPE.SNOS", "ENCUMBRANCE_TYPE.SSNMS"].includes(
@@ -291,7 +293,7 @@ const ScrapeByNone = async (
       houseNo !== undefined
     ) {
       logger.info("House No  found Skipping for SNOS ");
-      return "Public/Downloads/dummy.pdf";
+      return dummyFilePath;
     }
 
     await page.goto(
@@ -371,7 +373,7 @@ const ScrapeByNone = async (
     );
 
     if (!Object.entries(docs.data.documentList).length) {
-      filePath = "Public/Downloads/no-documents-found.png";
+      filePath = `Public/Downloads/${docNoIdentifier}.png`;
       await page.screenshot({
         path: filePath,
       });
@@ -386,7 +388,7 @@ const ScrapeByNone = async (
     filePath = await generatePDF(
       page,
       "#__next > div > div:nth-child(2) > div > div.container > div:nth-child(2) > div > table",
-      `Public/Downloads/AP-EncumbranceCertificate-document-without-docNumber`
+      `Public/Downloads/${docNoIdentifier}`
     );
 
     return filePath;
@@ -532,7 +534,8 @@ const apEcDownloader = async ({
           sroName,
           multipleSros,
           ownerName,
-          startDate
+          startDate,
+          docNo //docIdentifier
         );
         await page.close();
 

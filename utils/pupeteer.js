@@ -3,6 +3,7 @@ const fs = require("fs");
 const logger = require("./logger");
 const { PDFDocument } = require("pdf-lib");
 const { deleteFile } = require("./deleteFile");
+const {  loadImage } = require("canvas"); // For handling PNGs
 
 const puppeteerInstance = async (options = {}) => {
   try {
@@ -215,14 +216,13 @@ const generatePDF = async (page, tableSelector, filePath) => {
         }
       }
     };
-    const htmlData =  fs.readFileSync("Public/Downloads/dummy.html")
 
     const tableHTML = await getTableHTML();
     const finalHTML = htmlTemplate.replace(
       "<!-- Table will be appended here -->",
       tableHTML
     );
-    await page.setContent(htmlData.toString()); // Set the HTML content to the page
+    await page.setContent(finalHTML); // Set the HTML content to the page
     await downloadPdf(page, filePath);
     return `${filePath}.pdf`;
   } catch (error) {
@@ -237,26 +237,18 @@ async function mergePDFs(pdfPaths, outputPath) {
     // Create a new PDF document to hold the merged content
     const mergedPdf = await PDFDocument.create();
     const pdfOnlyPaths = pdfPaths.filter((path) => path.endsWith(".pdf"));
+    const pngOnlyPaths = pdfPaths.filter((path) => path.endsWith(".png"));
 
-    if (pdfOnlyPaths.length === 0) {
-      logger.info("No valid PDF files found to merge.");
+    if (pdfOnlyPaths.length === 0 && pngOnlyPaths.length === 0) {
+      logger.info("No valid PDF or PNG files found to merge.");
       return null;
     }
 
-    // Iterate over the paths of PDFs to merge
-    for (const pdfPath of pdfOnlyPaths) {
-      // Load each PDF
-      logger.info(pdfPath);
+    // Merge PDF documents
+    await mergePDFDocuments(pdfOnlyPaths, mergedPdf);
 
-      const pdfBytes = fs.readFileSync(pdfPath);
-      const pdf = await PDFDocument.load(pdfBytes);
-
-      // Copy each page to the merged PDF
-      const copiedPages = await mergedPdf.copyPages(pdf, pdf.getPageIndices());
-      copiedPages.forEach((page) => mergedPdf.addPage(page));
-      await deleteFile(pdfPath);
-    }
-
+    // Merge PNG screenshots
+    await mergePNGScreenshots(pngOnlyPaths, mergedPdf);
     // Save the merged PDF as bytes and write to the output file
     const mergedPdfBytes = await mergedPdf.save();
     fs.writeFileSync(outputPath, mergedPdfBytes);
@@ -264,6 +256,41 @@ async function mergePDFs(pdfPaths, outputPath) {
     return outputPath;
   } catch (error) {
     logger.error(`Error:${error.message}`);
+  }
+}
+
+// Function to merge PDF files
+async function mergePDFDocuments(pdfOnlyPaths, mergedPdf) {
+  for (const pdfPath of pdfOnlyPaths) {
+    logger.info(`Merging PDF: ${pdfPath}`);
+    const pdfBytes = fs.readFileSync(pdfPath);
+    const pdf = await PDFDocument.load(pdfBytes);
+
+    // Copy each page to the merged PDF
+    const copiedPages = await mergedPdf.copyPages(pdf, pdf.getPageIndices());
+    copiedPages.forEach((page) => mergedPdf.addPage(page));
+    await deleteFile(pdfPath); // Optional: Delete original PDF after merging
+  }
+}
+
+// Function to merge PNG files
+async function mergePNGScreenshots(pngOnlyPaths, mergedPdf) {
+  for (const pngPath of pngOnlyPaths) {
+    logger.info(`Merging PNG: ${pngPath}`);
+    const pngImage = await loadImage(pngPath);
+
+    // Create a blank PDF page for each PNG
+    const pngPage = mergedPdf.addPage([pngImage.width, pngImage.height]);
+    const pngImagePdf = await mergedPdf.embedPng(fs.readFileSync(pngPath));
+
+    // Draw PNG on the new PDF page
+    pngPage.drawImage(pngImagePdf, {
+      x: 0,
+      y: 0,
+      width: pngImage.width,
+      height: pngImage.height,
+    });
+    await deleteFile(pngPath); // Optional: Delete original PNG after merging
   }
 }
 
