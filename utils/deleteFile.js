@@ -8,8 +8,13 @@ const fs = require("fs").promises;
 
 const deleteFile = async (filePath) => {
   try {
-    await fs.unlink(filePath);
-    logger.info(`File deleted successfully: ${filePath}`);
+    if (filePath.includes("dummy")) {
+      logger.info(`skipped dummy file : ${filePath}`);
+    } else {
+      await fs.unlink(filePath);
+
+      logger.info(`File deleted successfully: ${filePath}`);
+    }
   } catch (error) {
     logger.error(`Error deleting file: ${error.message}`);
   }
