@@ -103,7 +103,7 @@ const searchByDocumentNumber = async (
     const filePath = await generatePDF(
       page,
       "#__next > div > div:nth-child(2) > div > div.container > div:nth-child(2) > div > table",
-      `Public/Downloads/${docNoIdentifier}`
+      `public/Downloads/${docNoIdentifier}`
     );
 
     return filePath;
@@ -175,7 +175,7 @@ const handleMultipleSro = async (
     }
   }
   const filePaths = await Promise.all(tasks);
-  const filePath = await mergePDFs(filePaths, `Public/Downloads/${docNo}.pdf`);
+  const filePath = await mergePDFs(filePaths, `public/Downloads/${docNo}.pdf`);
   return filePath;
 };
 
@@ -282,7 +282,7 @@ const ScrapeByNone = async (
   docNoIdentifier
 ) => {
   let filePath;
-  let dummyFilePath = "Public/dummy/dummy.pdf";
+  let dummyFilePath = "public/dummy/dummy.pdf";
   try {
     if (
       ["ENCUMBRANCE_TYPE.SNOS", "ENCUMBRANCE_TYPE.SSNMS"].includes(
@@ -373,7 +373,7 @@ const ScrapeByNone = async (
     );
 
     if (!Object.entries(docs.data.documentList).length) {
-      filePath = `Public/Downloads/${docNoIdentifier}.png`;
+      filePath = `public/Downloads/${docNoIdentifier}.png`;
       await page.screenshot({
         path: filePath,
       });
@@ -388,7 +388,7 @@ const ScrapeByNone = async (
     filePath = await generatePDF(
       page,
       "#__next > div > div:nth-child(2) > div > div.container > div:nth-child(2) > div > table",
-      `Public/Downloads/${docNoIdentifier}`
+      `public/Downloads/${docNoIdentifier}`
     );
 
     return filePath;
