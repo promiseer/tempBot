@@ -1,5 +1,5 @@
-# Use Node.js LTS version (consider a stable version that aligns with `canvas` requirements, e.g., 18.x)
-FROM node:20.17
+# Use Node.js LTS version
+FROM node:20.13.1-bookworm-slim
 # Install necessary packages for Puppeteer
 RUN apt-get update && apt-get install -y \
     libnss3 \
@@ -22,17 +22,11 @@ RUN apt-get update && apt-get install -y \
     gconf-service \
     libappindicator1 \
     libappindicator3-1 \
+    libasound2 \
+    # libcurl3 \
     lsb-release \
     xdg-utils \
-    wget \
-    libcairo2-dev \
-    libjpeg-dev \
-    libgif-dev \
-    pkg-config \
-    build-essential \
-    g++ \
-    libpangocairo-1.0-0 \
-    && rm -rf /var/lib/apt/lists/*
+    wget
 
 # Set working directory
 WORKDIR /app

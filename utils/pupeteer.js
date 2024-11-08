@@ -3,7 +3,6 @@ const fs = require("fs");
 const logger = require("./logger");
 const { PDFDocument } = require("pdf-lib");
 const { deleteFile } = require("./deleteFile");
-const {  loadImage } = require("canvas"); // For handling PNGs
 
 const puppeteerInstance = async (options = {}) => {
   try {
@@ -237,9 +236,9 @@ async function mergePDFs(pdfPaths, outputPath) {
     // Create a new PDF document to hold the merged content
     const mergedPdf = await PDFDocument.create();
     const pdfOnlyPaths = pdfPaths.filter((path) => path.endsWith(".pdf"));
-    const pngOnlyPaths = pdfPaths.filter((path) => path.endsWith(".png"));
+    // const pngOnlyPaths = pdfPaths.filter((path) => path.endsWith(".png"));
 
-    if (pdfOnlyPaths.length === 0 && pngOnlyPaths.length === 0) {
+    if (pdfOnlyPaths.length === 0) {
       logger.info("No valid PDF or PNG files found to merge.");
       return null;
     }
@@ -248,7 +247,7 @@ async function mergePDFs(pdfPaths, outputPath) {
     await mergePDFDocuments(pdfOnlyPaths, mergedPdf);
 
     // Merge PNG screenshots
-    await mergePNGScreenshots(pngOnlyPaths, mergedPdf);
+    // await mergePNGScreenshots(pngOnlyPaths, mergedPdf);
     // Save the merged PDF as bytes and write to the output file
     const mergedPdfBytes = await mergedPdf.save();
     fs.writeFileSync(outputPath, mergedPdfBytes);

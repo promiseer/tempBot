@@ -373,12 +373,8 @@ const ScrapeByNone = async (
     );
 
     if (!Object.entries(docs.data.documentList).length) {
-      filePath = `public/Downloads/${docNoIdentifier}.png`;
-      await page.screenshot({
-        path: filePath,
-      });
       logger.error("Documents not found on search data.");
-      return filePath;
+      return dummyFilePath;
     }
 
     await clickButton(page, "#selectAllId");
