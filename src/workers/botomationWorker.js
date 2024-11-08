@@ -23,7 +23,9 @@ Queue.process(async (job) => {
   const { queue, data, id } = job;
   const { state, caseId, filePath: fileDestination, encumbranceType } = data;
 
-  logger.info(`Received job for queue: ${queue.name} and Job ID:${id}`);
+  logger.info(
+    `Received job for queue: ${queue.name} and Job ID:${id} encumbranceType::${encumbranceType}`
+  );
 
   try {
     if (queue.name !== BOTOMATION_TASKS) {
@@ -51,8 +53,9 @@ Queue.process(async (job) => {
 
       case "TELANGANA":
         try {
-          // @TODO: few checks pending
-          // await telEcDownloader();
+          const { filePath } = await telEcDownloader(data);
+          // const file = await uploadFileGC(fileDestination, filePath);
+          // await createAttachement(caseId, file, encumbranceType);
           // await deleteFile(filePath);
           logger.info(`Successfully processed TEL-EC with Job ID:${id} `);
         } catch (error) {

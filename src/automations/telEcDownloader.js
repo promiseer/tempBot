@@ -7,34 +7,12 @@ const {
   waitForSelector,
   puppeteerInstance,
   selectOption,
+  generatePDF,
 } = require("../../utils/pupeteer");
 const logger = require("../../utils/logger");
 
-const telEcDownloader = async (maxTries = 0) => {
-  if (maxTries >= 3) {
-    logger.error(`Max tries of ${maxTries} reached. Stopping execution.`);
-    return;
-  }
-  const username = process.env.TEL_EC_USERNAME;
-  const password = process.env.TEL_EC_PASSWORD;
-  const url = "https://registration.telangana.gov.in/auth_login.htm";
-
-  let browser;
-
-  try {
-    browser = await puppeteerInstance();
-    const page = await browser.newPage();
-    await navigateToLoginPage(page, url);
-
-    const captchaText = await solveCaptcha(page);
-    await attemptLogin(browser, page, username, password, captchaText);
-
-    await handlePostLogin(page, browser);
-    await browser.close();
-  } catch (error) {
-    handleScraperError(error, browser);
-  }
-};
+const MAX_ATTEMPTS = 3;
+const CAPTCHA_REGEX = /^[a-zA-Z0-9]{6}$/;
 
 const navigateToLoginPage = async (page, url) => {
   await page.goto(url, { waitUntil: "networkidle2" });
@@ -45,8 +23,8 @@ const solveCaptcha = async (page) => {
   let attempts = 0;
   let captchaText = "";
 
-  while (!captchaText || !/^[a-zA-Z0-9]{6}$/.test(captchaText)) {
-    if (attempts >= 3) {
+  while (!captchaText || !CAPTCHA_REGEX.test(captchaText)) {
+    if (attempts >= MAX_ATTEMPTS) {
       logger.info("Maximum attempts reached. Refreshing the page...");
       await page.reload({ waitUntil: ["networkidle2", "domcontentloaded"] });
       attempts = 0; // Reset attempts after refresh
@@ -58,7 +36,7 @@ const solveCaptcha = async (page) => {
     await waitForSelector(page, imageSelector);
     await ensureImageIsLoaded(page, imageSelector);
 
-    const captchaImageBuffer = await captureCaptcha(page, imageSelector);
+    const captchaImageBuffer = await captureCaptchaImage(page, imageSelector);
     captchaText = await extractCaptchaFromImage(captchaImageBuffer);
 
     if (!captchaText || !/^[a-zA-Z0-9]{6}$/.test(captchaText)) {
@@ -86,7 +64,7 @@ const ensureImageIsLoaded = async (page, selector) => {
   }, selector);
 };
 
-const captureCaptcha = async (page, selector) => {
+const captureCaptchaImage = async (page, selector) => {
   const imgElement = await page.$(selector);
   if (!imgElement) {
     throw new Error("Image element not found after it was loaded.");
@@ -99,7 +77,7 @@ const extractCaptchaFromImage = async (buffer) => {
   return data.text.trim();
 };
 
-const attemptLogin = async (browser, page, username, password, captchaText) => {
+const attemptLogin = async (page, username, password, captchaText) => {
   await selectOption(page, "#user_type", "2"); // Select 'Citizen'
   await fillInput(page, "#username", username);
   await fillInput(page, "#password", password);
@@ -115,58 +93,65 @@ const attemptLogin = async (browser, page, username, password, captchaText) => {
   if (loginErrorElement) {
     logger.error("Login Atempt Error, reloading the page...");
     await page.close();
-    return;
-    // return telEcDownloader(); // Retry on successful login
   } else {
-    logger.info("Selector not found, continuing...");
     logger.info("Logged in Succesfully");
   }
 };
 
-const handlePostLogin = async (
-  page,
-  browser,
-  isSearchByDocumentNumber = true
-) => {
+const handlePostFormFIlled = async (page, docNoIdentifier) => {
   try {
+    await clickButton(page, "#checkall2"); //select all docs
+
+    await clickButton(
+      page,
+      "#form1 > div.s_d > div.col-md-3.col-sm-4 > div.pull-center > button"
+    );
+
+    await page.waitForNavigation();
+    filePath = await generatePDF(
+      page,
+      "table.table-bordered",
+      `public/Downloads/${docNoIdentifier}`
+    );
+
+    return filePath;
+  } catch (error) {
+    logger.error("Post-login action error:", error);
+    throw error;
+  }
+};
+
+const handleLogin = async (page, browser) => {
+  try {
+    const url = "https://registration.telangana.gov.in/auth_login.htm";
+    await navigateToLoginPage(page, url);
+
+    const captchaText = await solveCaptcha(page);
+    await attemptLogin(
+      page,
+      process.env.TEL_EC_USERNAME,
+      process.env.TEL_EC_PASSWORD,
+      captchaText
+    );
+
     await clickButton(
       page,
       "body > div.xs-hidden > div:nth-child(1) > div.container > div > form > div:nth-child(8) > a"
     );
 
-    const newPage = await getNewPageWhenLoaded(browser);
+    const nextPage = await getNewPageWhenLoaded(browser);
 
     logger.info("Landed on EC Search submit.");
     await delay(1000);
 
     // Click the submit button
-    await clickButton(newPage, "button.btn.btn-default");
+    await clickButton(nextPage, "button.btn.btn-default");
     await page.close();
-
-    if (isSearchByDocumentNumber) {
-      await searchByDocumentNumber(newPage);
-    } else {
-      await searchByProperty(newPage);
-    }
-
-    await clickButton(newPage, "#checkall2"); //select all docs
-
-    await clickButton(
-      newPage,
-      "#form1 > div.s_d > div.col-md-3.col-sm-4 > div.pull-center > button"
-    );
-    await delay(3000);
-
-    await downloadPdf(
-      newPage,
-      "public/Downloads/TEL-EncumbranceCertificate-document"
-    ); // Download the PDF
-    await newPage.close();
+    return nextPage;
   } catch (error) {
-    logger.error("Post-login action error:", error);
+    throw error;
   }
 };
-
 const handleScraperError = async (error, browser) => {
   try {
     if (error.message.includes("Navigation timeout of")) {
@@ -185,8 +170,9 @@ const handleScraperError = async (error, browser) => {
     logger.error(`ERROR=> ${error.message} `);
     await browser.close();
     return new Error(error.message);
-  } catch (error) {}
-  logger.error(error.message);
+  } catch (error) {
+    logger.error(error.message);
+  }
 };
 
 const getNewPageWhenLoaded = async (browser) => {
@@ -201,12 +187,21 @@ const getNewPageWhenLoaded = async (browser) => {
   });
 };
 
-const searchByDocumentNumber = async (page) => {
+const searchByDocumentNumber = async (
+  page,
+  encumbranceType,
+  docNo,
+  docYear,
+  sroName,
+  multipleSros,
+  startDate,
+  docNoIdentifier
+) => {
   // await delay(1000);
 
-  await fillInput(page, "#doct", "10");
-  await fillInput(page, "#regyear", "2020");
-  await fillInput(page, "#sroVal", "HYDERABAD (R.O)(1607)");
+  await fillInput(page, "#doct", docNo);
+  await fillInput(page, "#regyear", docYear);
+  await fillInput(page, "#sroVal", sroName);
   await delay(3000);
   await clickButton(page, "button.btn.btn-default");
   await delay(3000);
@@ -219,10 +214,16 @@ const searchByDocumentNumber = async (page) => {
     "#bean > div:nth-child(39) > div:nth-child(15) > button.btn.btn-default"
   );
   await delay(1000);
-  return;
+  return await handlePostFormFIlled(page, docNoIdentifier);
 };
 
-const searchByProperty = async (page) => {
+const searchByProperty = async (
+  page,
+  encumbranceType,
+  sroName,
+  startDate,
+  docNoIdentifier
+) => {
   await clickButton(
     page,
     "#command > div:nth-child(1) > div.col-md-2.col-sm-4"
@@ -262,7 +263,75 @@ const searchByProperty = async (page) => {
   await delay(1000);
   await clickButton(page, "button.btn.btn-default");
   await delay(3000);
+  await handlePostFormFIlled(page, docNoIdentifier);
 
   return;
 };
+
+const telEcDownloader = async ({
+  docNo,
+  docYear,
+  sroName,
+  multipleSros,
+  ownerName,
+  houseNo,
+  surveyNo,
+  village,
+  ward,
+  block,
+  district,
+  encumbranceType,
+  startDate,
+}) => {
+  const browser = await puppeteerInstance();
+  let page = await browser.newPage();
+  logger.info(":: Automation Started");
+  let filePath;
+  try {
+    page = await handleLogin(page, browser);
+
+    switch (encumbranceType) {
+      case "ENCUMBRANCE_TYPE.DNOS":
+        filePath = await searchByDocumentNumber(
+          page,
+          encumbranceType,
+          docNo,
+          docYear,
+          sroName,
+          multipleSros,
+          startDate,
+          docNo
+        );
+        await page.close();
+        break;
+
+      case "ENCUMBRANCE_TYPE.HNOS":
+        filePath = await searchByProperty(
+          page,
+          encumbranceType,
+          sroName,
+          startDate,
+          docNo
+        );
+        await page.close();
+        break;
+      case "ENCUMBRANCE_TYPE.TELHNOS":
+        break;
+      default:
+        logger.info("Invalid encumbranceType! ");
+        break;
+    }
+
+    await browser.close();
+    return { status: "ok", filePath };
+  } catch (error) {
+    logger.info(error.message);
+
+    throw new Error(error.message);
+    // handleScraperError(error, browser);
+  } finally {
+    await browser.close();
+  }
+};
+
 module.exports = telEcDownloader;
