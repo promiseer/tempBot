@@ -1,5 +1,6 @@
 const puppeteer = require("puppeteer");
 const fs = require("fs");
+const pathModule = require('path');
 const logger = require("./logger");
 const { PDFDocument } = require("pdf-lib");
 const { deleteFile } = require("./deleteFile");
@@ -152,6 +153,12 @@ const downloadPdf = async (page, path) => {
     printBackground: true, // Include background graphics
     margin: { top: 40, right: 40, bottom: 40, left: 40 }, // Adjust margins as needed
   });
+
+  const dirPath = pathModule.dirname(path);
+  // Check if the directory exists; if not, create it
+  if (!fs.existsSync(dirPath)) {
+    fs.mkdirSync(dirPath, { recursive: true });
+  }
 
   // Save the PDF to a file
   fs.writeFileSync(`${path}.pdf`, pdfBuffer);
