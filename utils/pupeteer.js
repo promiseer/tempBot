@@ -31,8 +31,13 @@ const initializeBrowser = async (options) => {
 };
 
 const delay = async (delay) => {
-  logger.info(`Sleeping for ${delay}ms`);
-  await new Promise((resolve) => setTimeout(resolve, delay));
+  const delayInMS = getRandomDelay(delay);
+  logger.info(`Sleeping for ${delayInMS}ms`);
+  await new Promise((resolve) => setTimeout(resolve, delayInMS));
+};
+
+const getRandomDelay = (min = 1000, max = 5000) => {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
 };
 
 const saveSessionData = async (page, cookiesFilePath, localStorageFilePath) => {

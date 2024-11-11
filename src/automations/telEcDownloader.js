@@ -107,7 +107,7 @@ const handlePostFormFIlled = async (page, docNoIdentifier) => {
       "#form1 > div.s_d > div.col-md-3.col-sm-4 > div.pull-center > button"
     );
 
-    await page.waitForNavigation();
+    await page.waitForNavigation({ waitUntil: 'networkidle2' });
     filePath = await generatePDF(
       page,
       "table.table-bordered",
