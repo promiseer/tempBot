@@ -54,9 +54,9 @@ Queue.process(async (job) => {
       case "TELANGANA":
         try {
           const { filePath } = await telEcDownloader(data);
-          // const file = await uploadFileGC(fileDestination, filePath);
-          // await createAttachement(caseId, file, encumbranceType);
-          // await deleteFile(filePath);
+          const file = await uploadFileGC(fileDestination, filePath);
+          await createAttachement(caseId, file, encumbranceType);
+          await deleteFile(filePath);
           logger.info(`Successfully processed TEL-EC with Job ID:${id} `);
         } catch (error) {
           logger.error(`Error processing TELANGANA: ${error.message}`);
