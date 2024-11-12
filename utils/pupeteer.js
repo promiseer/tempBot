@@ -1,6 +1,6 @@
 const puppeteer = require("puppeteer");
 const fs = require("fs");
-const pathModule = require('path');
+const pathModule = require("path");
 const logger = require("./logger");
 const { PDFDocument } = require("pdf-lib");
 const { deleteFile } = require("./deleteFile");
@@ -63,7 +63,31 @@ const fillInput = async (page, selector, text) => {
   await page.locator(selector).fill(text);
 };
 const selectOption = async (page, selector, value) => {
-  await page.select(selector, value);
+  const selectedOption = await getSelectedOption(page, selector, value);
+  if (selectedOption) {
+    await page.select(selector, selectedOption);
+  } else {
+    console.log(
+      `Option with value '${value}' not found in selector '${selector}'`
+    );
+  }
+};
+
+const getSelectedOption = async (page, selector, value) => {
+  await page.waitForSelector(selector + " option");
+
+  return await page.$$eval(
+    selector + " option",
+    (options, value) => {
+      console.log(options);
+
+      const matchedOption = options.find(
+        (option) => option.textContent === value
+      );
+      return matchedOption ? matchedOption.value : null;
+    },
+    value
+  );
 };
 
 const clickButton = async (page, selector, maxAttempts = 3, sleep = 1000) => {
@@ -83,6 +107,7 @@ const clickButton = async (page, selector, maxAttempts = 3, sleep = 1000) => {
       }
     } catch (error) {
       logger.info(`Error on attempt ${attempts + 1}: ${error}`);
+      throw error;
     }
 
     attempts++;
