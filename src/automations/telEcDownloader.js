@@ -37,7 +37,7 @@ const navigateToLoginPage = async (page, url, retries = 1) => {
       // Recursive call with reduced retries
       await navigateToLoginPage(page, url, retries - 1);
     } else {
-    logger.info("No retries left. Navigation failed.");
+      logger.info("No retries left. Navigation failed.");
     }
   }
 };
@@ -324,9 +324,7 @@ const searchByProperty = async (
   await delay(1000);
   await clickButton(page, "button.btn.btn-default");
   await delay(3000);
-  await handlePostFormFIlled(page, docNoIdentifier);
-
-  return;
+  return await handlePostFormFIlled(page, docNoIdentifier);
 };
 
 const fillBuildingDetails = async (
