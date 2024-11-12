@@ -132,6 +132,7 @@ const handlePostFormFIlled = async (page, docNoIdentifier) => {
 
     if (checkboxes.length === 0) {
       logger.error("No checkboxes found in the ordered list.");
+      return "public/dummy/dummy.pdf";
     }
 
     const threshold = 50;
