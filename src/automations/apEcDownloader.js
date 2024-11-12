@@ -284,17 +284,17 @@ const ScrapeByNone = async (
   let filePath;
   let dummyFilePath = "public/dummy/dummy.pdf";
   try {
-    if (
-      ["ENCUMBRANCE_TYPE.SNOS", "ENCUMBRANCE_TYPE.SSNMS"].includes(
-        encumbranceType
-      ) &&
-      typeof houseNo === "string" &&
-      houseNo?.trim() !== "" &&
-      houseNo !== undefined
-    ) {
-      logger.info("House No  found Skipping for SNOS ");
-      return dummyFilePath;
-    }
+    // if (
+    //   ["ENCUMBRANCE_TYPE.SNOS", "ENCUMBRANCE_TYPE.SSNMS"].includes(
+    //     encumbranceType
+    //   ) &&
+    //   typeof houseNo === "string" &&
+    //   houseNo?.trim() !== "" &&
+    //   houseNo !== undefined
+    // ) {
+    //   logger.info("House No  found Skipping for SNOS ");
+    //   return dummyFilePath;
+    // }
 
     await page.goto(
       "https://registration.ec.ap.gov.in/ecSearch/EncumbranceSearch",
@@ -408,14 +408,21 @@ const fillBuildingDetails = async (
   await fillInput(
     page,
     'input[name="houseNo"]',
-    ["ENCUMBRANCE_TYPE.SNOS", "ENCUMBRANCE_TYPE.SSNMS"].includes(
+    ["ENCUMBRANCE_TYPE.SHNOS", "ENCUMBRANCE_TYPE.SHNMS"].includes(
       encumbranceType
     )
       ? houseNo.split("/")[0]
       : houseNo
   );
 
-  await fillInput(page, 'input[name="inSurveyNo"]', surveyNo);
+  await fillInput(
+    page,
+    'input[name="inSurveyNo"]',
+    ["ENCUMBRANCE_TYPE.SSNMS"].includes(encumbranceType)
+      ? surveyNo.split("/")[0]
+      : surveyNo
+  );
+
   ward
     ? await fillInput(page, 'input[name="wardNo"]', ward)
     : logger.info("Skipping ward no input as it's empty");
