@@ -3,7 +3,7 @@ const { deleteFile } = require("../../utils/deleteFile");
 const { uploadFileGC } = require("../../utils/googleBucketUtils");
 const logger = require("../../utils/logger");
 const apEcDownloader = require("../automations/apEcDownloader");
-const telEcDownloader = require("../automations/telEcDownloader");
+const tgEcDownloader = require("../automations/tgEcDownloader");
 const { createAttachement } = require("../services/nirnai.service");
 
 Queue.on("ready", () => {
@@ -37,10 +37,10 @@ Queue.process(async (job) => {
     switch (state) {
       case "ANDHRA PRADESH":
         try {
-          const { filePath } = await apEcDownloader(data);
+          const { filePath, sros } = await apEcDownloader(data);
           if (filePath) {
             const file = await uploadFileGC(fileDestination, filePath);
-            await createAttachement(caseId, file, encumbranceType);
+            await createAttachement(caseId, file, sros, encumbranceType, data);
             await deleteFile(filePath);
             logger.info(
               `Successfully processed ANDHRA PRADESH with Job ID:${id} `
@@ -53,9 +53,9 @@ Queue.process(async (job) => {
 
       case "TELANGANA":
         try {
-          const { filePath } = await telEcDownloader(data);
+          const { filePath,sros } = await tgEcDownloader(data);
           const file = await uploadFileGC(fileDestination, filePath);
-          await createAttachement(caseId, file, encumbranceType);
+          await createAttachement(caseId, file, sros, encumbranceType, data);
           await deleteFile(filePath);
           logger.info(`Successfully processed TEL-EC with Job ID:${id} `);
         } catch (error) {

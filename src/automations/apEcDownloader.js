@@ -489,7 +489,7 @@ const apEcDownloader = async ({
   const browser = await puppeteerInstance();
   const page = await browser.newPage();
   logger.info(":: Automation Started");
-  let filePath;
+  let filePath,sros = sroName;
   try {
     switch (encumbranceType) {
       case "ENCUMBRANCE_TYPE.DNOS":
@@ -518,6 +518,7 @@ const apEcDownloader = async ({
           docNo,
           docYear
         );
+        sros = multipleSros.join(",");
         await page.close();
 
         break;
@@ -564,6 +565,7 @@ const apEcDownloader = async ({
           block,
           district
         );
+        sros = multipleSros.join(",");
         await page.close();
 
         break;
@@ -574,7 +576,7 @@ const apEcDownloader = async ({
     }
 
     await browser.close();
-    return { status: "ok", filePath };
+    return { status: "ok", filePath, sros };
   } catch (error) {
     logger.info(error.message);
 

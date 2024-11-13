@@ -34,7 +34,13 @@ const getToken = async () => {
   }
 };
 
-const createAttachement = async (caseId, file,  encumbranceType) => {
+const createAttachement = async (
+  caseId,
+  file,
+  sros,
+  encumbranceType,
+  { docNo, docYear, houseNo, surveyNo }
+) => {
   if (!caseId || !file) {
     logger.error("requested parameters not found");
     throw new Error("requested parameters not found");
@@ -42,6 +48,7 @@ const createAttachement = async (caseId, file,  encumbranceType) => {
 
   try {
     const token = await getToken();
+    const params = `Doc: ${docNo} Year: ${docYear} SRO: ${sros} H.No: ${houseNo} Sy.No: ${surveyNo}`;
     const response = await axios.post(
       `${backendUrl}/request/create/attachments`,
       {
@@ -57,8 +64,9 @@ const createAttachement = async (caseId, file,  encumbranceType) => {
             docSource: null,
             notify: true,
             inReport: false,
-            isBot:true,
-            encumbranceType
+            isBot: true,
+            encumbranceType,
+            params,
           },
         ],
       },
