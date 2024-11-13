@@ -290,7 +290,7 @@ const searchByProperty = async (
   await selectOption(page, "#dist_code", district); // Select 'dist_code'
   await delay(1000);
 
-  await selectOption(page, "#mandal_code", sroName); // Select 'mandal_code'
+  await selectOption(page, "#mandal_code", block); // Select 'mandal_code' NOTE:block id mandal here
   await delay(1000);
 
   await selectOption(page, "#village_code", village); // Select 'village_code'
@@ -381,7 +381,7 @@ const fillBoundedRegionDetails = async (eat, west, north, south) => {
   await fillInput(page, "#south", south); //south
 };
 
-const telEcDownloader = async ({
+const tgEcDownloader = async ({
   docNo,
   docYear,
   sroName,
@@ -399,7 +399,7 @@ const telEcDownloader = async ({
   const browser = await puppeteerInstance();
   let page = await browser.newPage();
   logger.info(":: Automation Started");
-  let filePath;
+  let filePath,sros = sroName;
   try {
     page = await handleLogin(page, browser);
 
@@ -444,7 +444,7 @@ const telEcDownloader = async ({
     }
 
     await browser.close();
-    return { status: "ok", filePath };
+    return { status: "ok", filePath, sros };
   } catch (error) {
     logger.info(error.message);
     await browser.close();
@@ -454,4 +454,4 @@ const telEcDownloader = async ({
   }
 };
 
-module.exports = telEcDownloader;
+module.exports = tgEcDownloader;
