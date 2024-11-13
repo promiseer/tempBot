@@ -259,7 +259,15 @@ const searchByDocumentNumber = async (
   await delay(3000);
   await clickButton(page, "button.btn.btn-default");
   await delay(3000);
-
+  const noDataElement = await page
+    .waitForSelector('div[style="text-align: center; color:red;"]', {
+      timeout: 2000,
+    })
+    .catch(() => null);
+  if (noDataElement) {
+    logger.info("No Data Found!");
+    return "public/dummy/dummy.pdf";
+  }
   await clickButton(page, "#bean > button");
   await delay(3000);
 
@@ -403,7 +411,8 @@ const tgEcDownloader = async ({
   const browser = await puppeteerInstance();
   let page = await browser.newPage();
   logger.info(":: Automation Started");
-  let filePath, sros = sroName;
+  let filePath,
+    sros = sroName;
   try {
     switch (encumbranceType) {
       case "ENCUMBRANCE_TYPE.DNOS":
@@ -418,7 +427,7 @@ const tgEcDownloader = async ({
           startDate,
           docNo
         );
-        await page.close();
+        // await page.close();
         break;
 
       case "ENCUMBRANCE_TYPE.HNOS":
