@@ -14,7 +14,7 @@ router.post("/generate-ec", async (req, res) => {
     houseNo,
     surveyNo,
     village,
-    wardBlock,
+    block,
     district,
     filePath,
     encumbranceTypes,
@@ -47,7 +47,7 @@ router.post("/generate-ec", async (req, res) => {
           houseNo,
           surveyNo,
           village,
-          wardBlock,
+          block,
           district,
           filePath,
           startDate
