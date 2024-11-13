@@ -99,25 +99,42 @@ const extractCaptchaFromImage = async (buffer) => {
   const { data } = await tesseract.recognize(buffer, "eng");
   return data.text.trim();
 };
+const attemptLogin = async (page, username, password, attempts = 1) => {
+  try {
+    logger.info(`Attempt ${attempts} to log in...`);
 
-const attemptLogin = async (page, username, password, captchaText) => {
-  await selectOption(page, "#user_type", "Citizen"); // Select 'Citizen'
-  await fillInput(page, "#username", username);
-  await fillInput(page, "#password", password);
-  await fillInput(page, "#captcha", captchaText);
+    // Solve captcha for each attempt
+    const captchaText = await solveCaptcha(page);
 
-  logger.info("Form filled.");
-  await clickButton(page, 'button.btn.btn-default[type="submit"]');
+    await selectOption(page, "#user_type", "Citizen"); // Select 'Citizen'
+    await fillInput(page, "#username", username);
+    await fillInput(page, "#password", password);
+    await fillInput(page, "#captcha", captchaText);
 
-  const loginErrorElement = await page
-    .waitForSelector("#myForm > h4", { timeout: 5000 })
-    .catch(() => null);
+    logger.info("Form filled.");
+    await clickButton(page, 'button.btn.btn-default[type="submit"]');
 
-  if (loginErrorElement) {
-    logger.error("Login Atempt Error, reloading the page...");
-    await page.close();
-  } else {
-    logger.info("Logged in Succesfully");
+    const loginErrorElement = await page
+      .waitForSelector("#myForm > h4", { timeout: 5000 })
+      .catch(() => null);
+
+    if (loginErrorElement) {
+      logger.error("Login attempt failed.");
+
+      if (attempts < MAX_ATTEMPTS) {
+        logger.info("Retrying...");
+        await page.reload({ waitUntil: ["networkidle2", "domcontentloaded"] });
+
+        await attemptLogin(page, username, password, attempts + 1);
+      } else {
+        throw new Error(`Failed to log in after ${MAX_ATTEMPTS} attempts.`);
+      }
+    } else {
+      logger.info("Logged in successfully.");
+    }
+  } catch (error) {
+    logger.error(`Error during login attempt ${attempts}: ${error.message}`);
+    throw error
   }
 };
 
@@ -178,12 +195,10 @@ const handleLogin = async (page, browser) => {
     const url = "https://registration.telangana.gov.in/auth_login.htm";
     await navigateToLoginPage(page, url, 2);
 
-    const captchaText = await solveCaptcha(page);
     await attemptLogin(
       page,
       process.env.TEL_EC_USERNAME,
-      process.env.TEL_EC_PASSWORD,
-      captchaText
+      process.env.TEL_EC_PASSWORD
     );
     await delay(1000);
     await clickButton(
@@ -250,8 +265,8 @@ const searchByDocumentNumber = async (
   startDate,
   docNoIdentifier
 ) => {
-  // await delay(1000);
   page = await handleLogin(page, browser);
+  await delay(1000);
 
   await fillInput(page, "#doct", docNo);
   await fillInput(page, "#regyear", docYear);
