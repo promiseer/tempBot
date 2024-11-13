@@ -21,7 +21,7 @@ router.post("/generate-ec", async (req, res) => {
     startDate
   } = req.body;
 
-  const requiredParams = { state, caseId, docNo, docYear, district, village, sroName, multipleSros, encumbranceTypes };
+  const requiredParams = { state, caseId, docNo, docYear, houseNo, district, village, sroName, multipleSros, encumbranceTypes };
   const missingParams = Object.keys(requiredParams).filter(param => !requiredParams[param] || (Array.isArray(requiredParams[param]) && !requiredParams[param].length));
   
   if (missingParams.length) {
