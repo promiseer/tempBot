@@ -119,7 +119,7 @@ const attemptLogin = async (page, username, password, attempts = 1) => {
       .catch(() => null);
 
     if (loginErrorElement) {
-      logger.error("Login attempt failed.");
+      logger.error(`Login attempt ${attempts} failed.`);
 
       if (attempts < MAX_ATTEMPTS) {
         logger.info("Retrying...");
@@ -133,8 +133,7 @@ const attemptLogin = async (page, username, password, attempts = 1) => {
       logger.info("Logged in successfully.");
     }
   } catch (error) {
-    logger.error(`Error during login attempt ${attempts}: ${error.message}`);
-    throw error
+    throw error;
   }
 };
 
@@ -163,9 +162,11 @@ const handlePostFormFIlled = async (page, docNoIdentifier) => {
           await checkbox.click();
         }
       }
+      logger.info("clicked on all check boxes")
     } else {
       // If fewer checkboxes, click the "Select All" button
       await clickButton(page, "#checkall2");
+      logger.info("clicked on all check boxes")
     }
 
     await clickButton(
@@ -213,7 +214,6 @@ const handleLogin = async (page, browser) => {
 
     // Click the submit button
     await clickButton(nextPage, "button.btn.btn-default");
-    await page.close();
     return nextPage;
   } catch (error) {
     throw error;
@@ -271,6 +271,7 @@ const searchByDocumentNumber = async (
   await fillInput(page, "#doct", docNo);
   await fillInput(page, "#regyear", docYear);
   await fillInput(page, "#sroVal", sroName);
+  logger.info("Document details have been filled")
   await delay(3000);
   await clickButton(page, "button.btn.btn-default");
   await delay(3000);
@@ -348,6 +349,7 @@ const searchByProperty = async (
       )
     : logger.info("Skipping Date input as it's empty"); //start date
   // await fillInput(page, 'input[name="sro_end_date"]', ""); //end date
+  logger.info("Property details have been filled")
 
   await delay(1000);
   await clickButton(page, "button.btn.btn-default");
