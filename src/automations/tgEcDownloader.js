@@ -427,7 +427,7 @@ const tgEcDownloader = async ({
           startDate,
           docNo
         );
-        // await page.close();
+        await page.close();
         break;
 
       case "ENCUMBRANCE_TYPE.HNOS":
@@ -460,7 +460,6 @@ const tgEcDownloader = async ({
     return { status: "ok", filePath, sros };
   } catch (error) {
     logger.info(error.message);
-    await browser.close();
     throw new Error(error.message);
   } finally {
     await browser.close();
