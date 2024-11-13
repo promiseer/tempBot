@@ -53,11 +53,13 @@ Queue.process(async (job) => {
 
       case "TELANGANA":
         try {
-          const { filePath,sros } = await tgEcDownloader(data);
-          const file = await uploadFileGC(fileDestination, filePath);
-          await createAttachement(caseId, file, sros, encumbranceType, data);
-          await deleteFile(filePath);
-          logger.info(`Successfully processed TEL-EC with Job ID:${id} `);
+          const { filePath, sros } = await tgEcDownloader(data);
+          if (filePath) {
+            const file = await uploadFileGC(fileDestination, filePath);
+            await createAttachement(caseId, file, sros, encumbranceType, data);
+            await deleteFile(filePath);
+            logger.info(`Successfully processed TEL-EC with Job ID:${id} `);
+          }
         } catch (error) {
           logger.error(`Error processing TELANGANA: ${error.message}`);
         }

@@ -240,6 +240,7 @@ const getNewPageWhenLoaded = async (browser) => {
 };
 
 const searchByDocumentNumber = async (
+  browser,
   page,
   encumbranceType,
   docNo,
@@ -250,6 +251,7 @@ const searchByDocumentNumber = async (
   docNoIdentifier
 ) => {
   // await delay(1000);
+  page = await handleLogin(page, browser);
 
   await fillInput(page, "#doct", docNo);
   await fillInput(page, "#regyear", docYear);
@@ -269,6 +271,7 @@ const searchByDocumentNumber = async (
 };
 
 const searchByProperty = async (
+  browser,
   page,
   encumbranceType,
   houseNo,
@@ -281,6 +284,7 @@ const searchByProperty = async (
   startDate,
   docNoIdentifier
 ) => {
+  page = await handleLogin(page, browser);
   await delay(1000);
   await clickButton(
     page,
@@ -399,13 +403,12 @@ const tgEcDownloader = async ({
   const browser = await puppeteerInstance();
   let page = await browser.newPage();
   logger.info(":: Automation Started");
-  let filePath,sros = sroName;
+  let filePath, sros = sroName;
   try {
-    page = await handleLogin(page, browser);
-
     switch (encumbranceType) {
       case "ENCUMBRANCE_TYPE.DNOS":
         filePath = await searchByDocumentNumber(
+          browser,
           page,
           encumbranceType,
           docNo,
@@ -423,6 +426,7 @@ const tgEcDownloader = async ({
       case "ENCUMBRANCE_TYPE.SNOS":
       case "ENCUMBRANCE_TYPE.SSNOS":
         filePath = await searchByProperty(
+          browser,
           page,
           encumbranceType,
           houseNo,
