@@ -162,11 +162,11 @@ const handlePostFormFIlled = async (page, docNoIdentifier) => {
           await checkbox.click();
         }
       }
-      logger.info("clicked on all check boxes")
+      logger.info("clicked on all check boxes");
     } else {
       // If fewer checkboxes, click the "Select All" button
       await clickButton(page, "#checkall2");
-      logger.info("clicked on all check boxes")
+      logger.info("clicked on all check boxes");
     }
 
     await clickButton(
@@ -271,7 +271,7 @@ const searchByDocumentNumber = async (
   await fillInput(page, "#doct", docNo);
   await fillInput(page, "#regyear", docYear);
   await fillInput(page, "#sroVal", sroName);
-  logger.info("Document details have been filled")
+  logger.info("Document details have been filled");
   await delay(3000);
   await clickButton(page, "button.btn.btn-default");
   await delay(3000);
@@ -281,8 +281,16 @@ const searchByDocumentNumber = async (
     })
     .catch(() => null);
   if (noDataElement) {
-    logger.info("No Data Found!");
-    return "public/dummy/dummy.pdf";
+    const text = await page.evaluate(
+      (element) => element.innerText,
+      noDataElement
+    );
+
+    // Check if the text content matches
+    if (text.trim() === "No Data Found") {
+      logger.info("No Data Found!");
+      return "public/dummy/dummy.pdf";
+    }
   }
   await clickButton(page, "#bean > button");
   await delay(3000);
@@ -349,7 +357,7 @@ const searchByProperty = async (
       )
     : logger.info("Skipping Date input as it's empty"); //start date
   // await fillInput(page, 'input[name="sro_end_date"]', ""); //end date
-  logger.info("Property details have been filled")
+  logger.info("Property details have been filled");
 
   await delay(1000);
   await clickButton(page, "button.btn.btn-default");
