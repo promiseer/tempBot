@@ -345,7 +345,7 @@ const searchByProperty = async (
       encumbranceType
     )
   ) {
-    await fillSurveyDetails(page, encumbranceType, surveyNo);
+    await fillSurveyDetails(page, encumbranceType, surveyNo, houseNo);
   }
 
   //search period
