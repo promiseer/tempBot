@@ -39,7 +39,7 @@ const createAttachement = async (
   file,
   sros,
   encumbranceType,
-  { docNo, docYear, houseNo, surveyNo }
+  { docNo, docYear, houseNo, surveyNo , identifier}
 ) => {
   if (!caseId || !file) {
     logger.error("requested parameters not found");
@@ -67,6 +67,7 @@ const createAttachement = async (
             isBot: true,
             encumbranceType,
             params,
+            identifier
           },
         ],
       },

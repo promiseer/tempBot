@@ -18,10 +18,11 @@ router.post("/generate-ec", async (req, res) => {
     district,
     filePath,
     encumbranceTypes,
-    startDate
+    startDate,
+    identifier
   } = req.body;
 
-  const requiredParams = { state, caseId, docNo, docYear, houseNo, district, village, sroName, multipleSros, encumbranceTypes };
+  const requiredParams = { state, caseId, docNo, docYear, houseNo, district, village, sroName, multipleSros, encumbranceTypes,identifier };
   const missingParams = Object.keys(requiredParams).filter(param => !requiredParams[param] || (Array.isArray(requiredParams[param]) && !requiredParams[param].length));
   
   if (missingParams.length) {
@@ -50,7 +51,8 @@ router.post("/generate-ec", async (req, res) => {
           block,
           district,
           filePath,
-          startDate
+          startDate,
+          identifier
         });
         return job.id;
       })
