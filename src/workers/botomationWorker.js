@@ -5,23 +5,12 @@ const logger = require("../../utils/logger");
 const apEcDownloader = require("../automations/apEcDownloader");
 const tgEcDownloader = require("../automations/tgEcDownloader");
 const { createAttachement } = require("../services/nirnai.service");
-
-Queue.on("ready", () => {
-  logger.info("Queue is running and ready to process jobs.");
-});
-
-Queue.on("error", (error) => {
-  logger.error(`Queue encountered an error: ${error.message}`);
-  throw new Error("Queue is not running or cannot connect to Redis.");
-});
-
-Queue.on("stalled", (job) => {
-  logger.warn(`Job ${job.id} stalled and will be retried.`);
-});
-
-Queue.process(async (job) => {
+const cluster = require("cluster");
+const totalCPUs = require("os").cpus().length;
+const processJob = async (job) => {
   const { queue, data, id } = job;
   const { state, caseId, filePath: fileDestination, encumbranceType } = data;
+  logger.info(`Worker with id ${process.pid} started`);
 
   logger.info(
     `Received job for queue: ${queue.name} and Job ID:${id} encumbranceType::${encumbranceType}`
@@ -33,6 +22,7 @@ Queue.process(async (job) => {
         `Invalid queue. Expected: ${BOTOMATION_TASKS}, but got: ${queue.name}`
       );
     }
+
     logger.info(`Worker listening to '${queue.name}' queue`);
     switch (state) {
       case "ANDHRA PRADESH":
@@ -43,7 +33,7 @@ Queue.process(async (job) => {
             await createAttachement(caseId, file, sros, encumbranceType, data);
             await deleteFile(filePath);
             logger.info(
-              `Successfully processed ANDHRA PRADESH with Job ID:${id} `
+              `Successfully processed ANDHRA PRADESH with Job ID:${id}`
             );
           }
         } catch (error) {
@@ -58,7 +48,7 @@ Queue.process(async (job) => {
             const file = await uploadFileGC(fileDestination, filePath);
             await createAttachement(caseId, file, sros, encumbranceType, data);
             await deleteFile(filePath);
-            logger.info(`Successfully processed TEL-EC with Job ID:${id} `);
+            logger.info(`Successfully processed TEL-EC with Job ID:${id}`);
           }
         } catch (error) {
           logger.error(`Error processing TELANGANA: ${error.message}`);
@@ -69,7 +59,7 @@ Queue.process(async (job) => {
         try {
           // @TODO: few checks pending
           // await tamilNaduEcDownloader();
-          logger.info(`Successfully processed TEL-EC with Job ID:${id} `);
+          logger.info(`Successfully processed TEL-EC with Job ID:${id}`);
         } catch (error) {
           logger.error(`Error processing TAMILNADU: ${error.message}`);
         }
@@ -81,4 +71,28 @@ Queue.process(async (job) => {
   } catch (error) {
     logger.info(error.message);
   }
-});
+};
+
+// Initialize queue processing with concurrency
+if (cluster.isMaster) {
+  logger.info(`Number of CPUs is ${totalCPUs}`);
+  logger.info(`Master ${process.pid} is running`);
+  for (let i = 0; i < totalCPUs; i++) {
+    cluster.fork(); // Spawn worker processes
+  }
+
+  cluster.on("exit", (worker) => {
+    logger.info(`worker ${worker.process.pid} died`);
+    logger.info("Let's fork another worker!");
+    cluster.fork();
+  });
+} else {
+  // Each worker will process jobs with a concurrency limit
+  Queue.process(totalCPUs, async (job) => {
+    await processJob(job);
+  });
+}
+
+logger.info(
+  `Master process ${process.pid} is running with ${totalCPUs} concurrent workers.`
+);
