@@ -25,9 +25,9 @@ const handleNavigationError = async (fn, ...args) => {
       return await fn(...args);
     } catch (error) {
       attempts++;
-      console.error(`Attempt ${attempts} failed:`, error.message);
+      logger.error(`Attempt ${attempts} failed:`, error.message);
       if (attempts >= maxRetries) {
-        console.error("Max retries reached:", error.message);
+        logger.error("Max retries reached:", error.message);
         throw error;
       }
       await new Promise((resolve) => setTimeout(resolve, 1000 * attempts)); // Exponential backoff
@@ -405,23 +405,9 @@ const fillBuildingDetails = async (
   startDate,
   encumbranceType
 ) => {
-  await fillInput(
-    page,
-    'input[name="houseNo"]',
-    ["ENCUMBRANCE_TYPE.SHNOS", "ENCUMBRANCE_TYPE.SHNMS"].includes(
-      encumbranceType
-    )
-      ? houseNo.split("/")[0]
-      : houseNo
-  );
+  await fillInput(page, 'input[name="houseNo"]', houseNo);
 
-  await fillInput(
-    page,
-    'input[name="inSurveyNo"]',
-    ["ENCUMBRANCE_TYPE.SSNMS"].includes(encumbranceType)
-      ? surveyNo.split("/")[0]
-      : surveyNo
-  );
+  await fillInput(page, 'input[name="inSurveyNo"]', surveyNo);
 
   ward
     ? await fillInput(page, 'input[name="wardNo"]', ward)
@@ -449,9 +435,7 @@ const fillSurveyDetails = async (
 ) => {
   await clickButton(page, '.form-check-input[value="BS"]');
   await clickButton(page, '.form-check-input[value="SAL"]');
-  ["ENCUMBRANCE_TYPE.SASNMS"].includes(encumbranceType)
-    ? await fillInput(page, 'input[name="inSurveyNo"]', survey.split("/")[0])
-    : await fillInput(page, 'input[name="inSurveyNo"]', survey);
+  await fillInput(page, 'input[name="inSurveyNo"]', survey);
   await fillInput(page, 'input[name="revenueVillage"]', village);
   startDate
     ? await page.type('input[name="periodOfSearchFrom"]', startDate)

@@ -373,16 +373,10 @@ const fillBuildingDetails = async (
   block
 ) => {
   //building structures
-  await fillInput(
-    page,
-    "#house_no",
-    ["ENCUMBRANCE_TYPE.SHNOS"].includes(encumbranceType)
-      ? houseNo.split("/")[0]
-      : houseNo
-  ); //House No
+  await fillInput(page, "#house_no", houseNo); //House No
 
   //for flat no
-  // await fillInput(page, "#flat_no", flatNo); //Flat No
+  await fillInput(page, "#flat_no", houseNo); //Flat No
   // await fillInput(page, "#apt", ""); //Apartment
 
   //for ward/block
@@ -401,13 +395,7 @@ const fillSurveyDetails = async (page, encumbranceType, surveyNo, plot_no) => {
     ? await fillInput(page, "#plot_no", plot_no)
     : logger.info("Skipping plot_no input as it's empty"); //plot_no
 
-  await fillInput(
-    page,
-    "#sy_no",
-    ["ENCUMBRANCE_TYPE.SSNOS"].includes(encumbranceType)
-      ? surveyNo.split("/")[0]
-      : surveyNo
-  ); //sy_no
+  await fillInput(page, "#sy_no", surveyNo); //sy_no
 };
 
 const fillBoundedRegionDetails = async (eat, west, north, south) => {

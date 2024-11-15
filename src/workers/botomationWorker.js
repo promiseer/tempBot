@@ -10,7 +10,6 @@ const totalCPUs = require("os").cpus().length;
 const processJob = async (job) => {
   const { queue, data, id } = job;
   const { state, caseId, filePath: fileDestination, encumbranceType } = data;
-  logger.info(`Worker with id ${process.pid} started`);
 
   logger.info(
     `Received job for queue: ${queue.name} and Job ID:${id} encumbranceType::${encumbranceType}`
@@ -48,7 +47,7 @@ const processJob = async (job) => {
             const file = await uploadFileGC(fileDestination, filePath);
             await createAttachement(caseId, file, sros, encumbranceType, data);
             await deleteFile(filePath);
-            logger.info(`Successfully processed TEL-EC with Job ID:${id}`);
+            logger.info(`Successfully processed TG-EC with Job ID:${id}`);
           }
         } catch (error) {
           logger.error(`Error processing TELANGANA: ${error.message}`);
@@ -59,7 +58,7 @@ const processJob = async (job) => {
         try {
           // @TODO: few checks pending
           // await tamilNaduEcDownloader();
-          logger.info(`Successfully processed TEL-EC with Job ID:${id}`);
+          logger.info(`Successfully processed TG-EC with Job ID:${id}`);
         } catch (error) {
           logger.error(`Error processing TAMILNADU: ${error.message}`);
         }
@@ -76,23 +75,25 @@ const processJob = async (job) => {
 // Initialize queue processing with concurrency
 if (cluster.isMaster) {
   logger.info(`Number of CPUs is ${totalCPUs}`);
-  logger.info(`Master ${process.pid} is running`);
   for (let i = 0; i < totalCPUs; i++) {
     cluster.fork(); // Spawn worker processes
   }
 
-  cluster.on("exit", (worker) => {
-    logger.info(`worker ${worker.process.pid} died`);
-    logger.info("Let's fork another worker!");
+  cluster.on("exit", (worker, code, signal) => {
+    logger.info(
+      `Worker ${worker.process.pid} died with code ${code} and signal ${signal}`
+    );
+    logger.info("Forking another worker...");
     cluster.fork();
   });
+  logger.info(
+    `Master process ${process.pid} is running with ${totalCPUs} concurrent workers.`
+  );
 } else {
   // Each worker will process jobs with a concurrency limit
   Queue.process(totalCPUs, async (job) => {
+    logger.info(`Worker ${process.pid} is processing job ${job.id}`);
     await processJob(job);
+    logger.info(`Worker ${process.pid} finished job ${job.id}`);
   });
 }
-
-logger.info(
-  `Master process ${process.pid} is running with ${totalCPUs} concurrent workers.`
-);
