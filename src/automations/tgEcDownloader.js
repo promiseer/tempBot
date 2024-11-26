@@ -140,6 +140,10 @@ const attemptLogin = async (page, username, password, attempts = 1) => {
 const handlePostFormFIlled = async (page, docNoIdentifier) => {
   try {
     await delay(2000);
+    await page.waitForNavigation({
+      waitUntil: ["networkidle2", "domcontentloaded"],
+      timeout: 60000,
+    });
     // await page.waitForSelector("#form1 > div.s_d > div.col-md-3.col-sm-4 > ol");
 
     const checkboxes = await page.$$(
@@ -169,15 +173,17 @@ const handlePostFormFIlled = async (page, docNoIdentifier) => {
       logger.info("clicked on all check boxes");
     }
 
-    await clickButton(
-      page,
-      "#form1 > div.s_d > div.col-md-3.col-sm-4 > div.pull-center > button"
-    );
+    await Promise.all([
+      page.waitForNavigation({
+        waitUntil: ["networkidle2", "domcontentloaded"],
+        timeout: 300000,
+      }),
+      clickButton(
+        page,
+        "#form1 > div.s_d > div.col-md-3.col-sm-4 > div.pull-center > button"
+      ),
+    ]);
 
-    await page.waitForNavigation({
-      waitUntil: ["networkidle2", "domcontentloaded"],
-      timeout: 60000,
-    });
     filePath = await generatePDF(
       page,
       "table.table-bordered",
@@ -299,6 +305,7 @@ const searchByDocumentNumber = async (
     page,
     "#bean > div:nth-child(39) > div:nth-child(15) > button.btn.btn-default"
   );
+  logger.info("clicked submit button")
   return await handlePostFormFIlled(page, docNoIdentifier);
 };
 
@@ -346,7 +353,13 @@ const searchByProperty = async (
       encumbranceType
     )
   ) {
-    await fillSurveyDetails(page, encumbranceType, surveyNo, houseNo, propertyType);
+    await fillSurveyDetails(
+      page,
+      encumbranceType,
+      surveyNo,
+      houseNo,
+      propertyType
+    );
   }
 
   //search period
@@ -390,9 +403,15 @@ const fillBuildingDetails = async (
     : logger.info("Skipping block input as it's empty"); //ward no //blockno
 };
 
-const fillSurveyDetails = async (page, encumbranceType, surveyNo, plot_no, propertyType) => {
+const fillSurveyDetails = async (
+  page,
+  encumbranceType,
+  surveyNo,
+  plot_no,
+  propertyType
+) => {
   //agricultural lands
-  propertyType==="PROPERTY_TYPE.VACANT_LAND"
+  propertyType === "PROPERTY_TYPE.VACANT_LAND"
     ? await fillInput(page, "#plot_no", plot_no)
     : logger.info("Skipping plot_no input as it's empty"); //plot_no
 
@@ -421,7 +440,7 @@ const tgEcDownloader = async ({
   district,
   encumbranceType,
   startDate,
-  propertyType
+  propertyType,
 }) => {
   const browser = await puppeteerInstance();
   let page = await browser.newPage();
@@ -440,7 +459,7 @@ const tgEcDownloader = async ({
           sroName,
           multipleSros,
           startDate,
-          docNo,
+          docNo
         );
         await page.close();
         break;
