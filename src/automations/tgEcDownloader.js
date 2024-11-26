@@ -314,7 +314,8 @@ const searchByProperty = async (
   district,
   sroName,
   startDate,
-  docNoIdentifier
+  docNoIdentifier,
+  propertyType
 ) => {
   page = await handleLogin(page, browser);
   await delay(1000);
@@ -345,7 +346,7 @@ const searchByProperty = async (
       encumbranceType
     )
   ) {
-    await fillSurveyDetails(page, encumbranceType, surveyNo, houseNo);
+    await fillSurveyDetails(page, encumbranceType, surveyNo, houseNo, propertyType);
   }
 
   //search period
@@ -389,9 +390,9 @@ const fillBuildingDetails = async (
     : logger.info("Skipping block input as it's empty"); //ward no //blockno
 };
 
-const fillSurveyDetails = async (page, encumbranceType, surveyNo, plot_no) => {
+const fillSurveyDetails = async (page, encumbranceType, surveyNo, plot_no, propertyType) => {
   //agricultural lands
-  plot_no
+  propertyType==="PROPERTY_TYPE.VACANT_LAND"
     ? await fillInput(page, "#plot_no", plot_no)
     : logger.info("Skipping plot_no input as it's empty"); //plot_no
 
@@ -420,6 +421,7 @@ const tgEcDownloader = async ({
   district,
   encumbranceType,
   startDate,
+  propertyType
 }) => {
   const browser = await puppeteerInstance();
   let page = await browser.newPage();
@@ -438,7 +440,7 @@ const tgEcDownloader = async ({
           sroName,
           multipleSros,
           startDate,
-          docNo
+          docNo,
         );
         await page.close();
         break;
@@ -459,7 +461,8 @@ const tgEcDownloader = async ({
           district,
           sroName,
           startDate,
-          docNo
+          docNo,
+          propertyType
         );
         await page.close();
         break;
