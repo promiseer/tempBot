@@ -177,6 +177,8 @@ const downloadPdf = async (page, path) => {
     format: "Legal", // Adjust the format as needed
     printBackground: true, // Include background graphics
     margin: { top: 40, right: 40, bottom: 40, left: 40 }, // Adjust margins as needed
+    preferCSSPageSize: true, // Ensure page size follows CSS rules (important if CSS rules for page size are used)
+    scale: 0.8, // Scale down the content to fit better on the page (optional)
   });
 
   const dirPath = pathModule.dirname(path);
