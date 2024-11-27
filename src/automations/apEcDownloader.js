@@ -12,6 +12,7 @@ const {
   delay,
   mergePDFs,
 } = require("../../utils/pupeteer");
+let dummyFilePath = "public/dummy/dummy.pdf";
 
 // Helper function for navigation error handling
 const handleNavigationError = async (fn, ...args) => {
@@ -97,7 +98,16 @@ const searchByDocumentNumber = async (
     //   );
     // }
 
-    await handleSecondForm(page, encumbranceType, multipleSros, startDate);
+    const found = await handleSecondForm(
+      page,
+      encumbranceType,
+      multipleSros,
+      startDate
+    );
+    if (!found) {
+      logger.error("Documents not found on search data.");
+      return dummyFilePath;
+    }
     await page.waitForNavigation();
 
     const filePath = await generatePDF(
@@ -234,8 +244,18 @@ const handleSecondForm = async (
 
     // Submit form and proceed to download
     await clickButton(page, 'form button[type="submit"]');
+
+    const docs = await responseValidator(
+      page,
+      "https://registration.ec.ap.gov.in/ecSearchAPI/v1/public/getLinkDocumentsByPropertyDetails"
+    );
+
+    if (!Object.entries(docs.data.documentList).length) {
+      return false;
+    }
     await clickButton(page, "#selectAllId");
     await clickButton(page, ".btn.btn-primary");
+    return true;
   } catch (error) {
     throw error;
   }
@@ -282,7 +302,6 @@ const ScrapeByNone = async (
   docNoIdentifier
 ) => {
   let filePath;
-  let dummyFilePath = "public/dummy/dummy.pdf";
   try {
     // if (
     //   ["ENCUMBRANCE_TYPE.SNOS", "ENCUMBRANCE_TYPE.SSNMS"].includes(
@@ -473,7 +492,8 @@ const apEcDownloader = async ({
   const browser = await puppeteerInstance();
   const page = await browser.newPage();
   logger.info(":: Automation Started");
-  let filePath,sros = sroName;
+  let filePath,
+    sros = sroName;
   try {
     switch (encumbranceType) {
       case "ENCUMBRANCE_TYPE.DNOS":
