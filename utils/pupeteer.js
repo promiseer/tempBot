@@ -213,7 +213,9 @@ const generatePDF = async (page, tableSelector, filePath) => {
           padding: 8px;
           margin-bottom: 0 ;
           page-break-inside: avoid; /* Prevent row splitting across pages */
-
+          word-wrap: break-word; /* Allow text to wrap inside the cells */
+          white-space: normal; /* Ensure content wraps inside cells */
+          overflow-wrap: break-word; /* Break words that are too long */
       }
       thead {
           display: table-header-group; /* Repeat header on each page */

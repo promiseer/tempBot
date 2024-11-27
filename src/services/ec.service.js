@@ -76,7 +76,6 @@ const getJobStatus = async (jobIds) => {
   const jobs = await Promise.all(
     jobIds.map(async (jobId) => {
       const job = await Queue.getJob(jobId);
-      logger.info(`${job}`);
 
       if (!job) {
         return { jobId, error: "Job not found" };

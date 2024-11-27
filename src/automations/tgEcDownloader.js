@@ -140,10 +140,10 @@ const attemptLogin = async (page, username, password, attempts = 1) => {
 const handlePostFormFIlled = async (page, docNoIdentifier) => {
   try {
     await delay(2000);
-    await page.waitForNavigation({
-      waitUntil: ["networkidle2", "domcontentloaded"],
-      timeout: 60000,
-    });
+    // await page.waitForNavigation({
+    //   waitUntil: ["networkidle2", "domcontentloaded"],
+    //   timeout: 60000,
+    // });
     // await page.waitForSelector("#form1 > div.s_d > div.col-md-3.col-sm-4 > ol");
 
     const checkboxes = await page.$$(
@@ -158,20 +158,20 @@ const handlePostFormFIlled = async (page, docNoIdentifier) => {
     const threshold = 50;
 
     // Click each checkbox if it is not already checked
-    if (checkboxes.length > threshold) {
-      // If there are many checkboxes, click each individually
-      for (const checkbox of checkboxes) {
-        const isChecked = await checkbox.evaluate((el) => el.checked);
-        if (!isChecked) {
-          await checkbox.click();
-        }
-      }
-      logger.info("clicked on all check boxes");
-    } else {
+    // if (checkboxes.length > threshold) {
+    //   // If there are many checkboxes, click each individually
+    //   for (const checkbox of checkboxes) {
+    //     const isChecked = await checkbox.evaluate((el) => el.checked);
+    //     if (!isChecked) {
+    //       await checkbox.click();
+    //     }
+    //   }
+    //   logger.info("clicked on all check boxes");
+    // } else {
       // If fewer checkboxes, click the "Select All" button
       await clickButton(page, "#checkall2");
       logger.info("clicked on all check boxes");
-    }
+    // }
 
     await Promise.all([
       page.waitForNavigation({
