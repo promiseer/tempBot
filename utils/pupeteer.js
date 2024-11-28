@@ -1,9 +1,12 @@
 const puppeteer = require("puppeteer");
+const Captcha = require("2captcha");
 const fs = require("fs");
 const pathModule = require("path");
 const logger = require("./logger");
 const { PDFDocument } = require("pdf-lib");
 const { deleteFile } = require("./deleteFile");
+
+const solver = new Captcha.Solver(process.env.CAPTCHA_KEY);
 
 const puppeteerInstance = async (options = {}) => {
   try {
@@ -169,6 +172,53 @@ const waitForSelector = async (page, selector, timeout = 10000) => {
     await page.waitForSelector(selector, { timeout });
   } catch (error) {
     throw new Error(`Timeout while waiting for selector: ${selector}`);
+  }
+};
+
+const getCaptchaTextFromImage = async (
+  page,
+  selector,
+  maxRetries = 10,
+  retryInterval = 1000
+) => {
+  try {
+    // Wait for the CAPTCHA element
+    await page.waitForSelector(selector);
+
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+      // Capture the image from the DOM
+      const element = await page.$(selector);
+      if (!element) {
+        throw new Error("CAPTCHA element not found");
+      }
+
+      const imagePath = `./captcha_${Date.now()}.png`;
+      await element.screenshot({ path: imagePath });
+
+      // Read the image file and convert to base64
+      const imageBase64 = fs.readFileSync(imagePath, "base64");
+
+      // Send the image to 2Captcha for solving
+      try {
+        const result = await solver.imageCaptcha(imageBase64);
+        if (result?.data) {
+          const captchaText = result.data.toUpperCase();
+          console.log("CAPTCHA Text:", captchaText);
+          fs.unlinkSync(imagePath);
+          return captchaText; // Return the solved CAPTCHA text in uppercase
+        }
+      } catch (err) {
+        console.error("Error solving CAPTCHA:", err.message);
+      }
+
+      console.log(`Retrying... attempts left: ${maxRetries - attempt - 1}`);
+      await new Promise((resolve) => setTimeout(resolve, retryInterval)); // Wait before retrying
+    }
+
+    throw new Error("Failed to retrieve CAPTCHA text after multiple attempts");
+  } catch (error) {
+    console.error("Error in getCaptchaTextFromImage:", error.message);
+    throw error;
   }
 };
 
@@ -343,6 +393,7 @@ module.exports = {
   responseValidator,
   waitForSelector,
   getCaptchaText,
+  getCaptchaTextFromImage,
   downloadPdf,
   delay,
   elementFinder,

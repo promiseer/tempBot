@@ -4,6 +4,7 @@ const { uploadFileGC } = require("../../utils/googleBucketUtils");
 const logger = require("../../utils/logger");
 const apEcDownloader = require("../automations/apEcDownloader");
 const tgEcDownloader = require("../automations/tgEcDownloader");
+const tnEcDowloader = require("../automations/tnEcDownloader");
 const { createAttachement } = require("../services/nirnai.service");
 const cluster = require("cluster");
 const totalCPUs = require("os").cpus().length;
@@ -56,9 +57,8 @@ const processJob = async (job) => {
 
       case "TAMILNADU":
         try {
-          // @TODO: few checks pending
-          // await tamilNaduEcDownloader();
-          logger.info(`Successfully processed TG-EC with Job ID:${id}`);
+          await tnEcDowloader(data);
+          logger.info(`Successfully processed TN-EC with Job ID:${id}`);
         } catch (error) {
           logger.error(`Error processing TAMILNADU: ${error.message}`);
         }
