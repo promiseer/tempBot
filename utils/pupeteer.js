@@ -204,8 +204,7 @@ const getCaptchaTextFromImage = async (
         if (result?.data) {
           const captchaText = result.data.toUpperCase();
           console.log("CAPTCHA Text:", captchaText);
-          fs.unlinkSync(imagePath);
-          return captchaText; // Return the solved CAPTCHA text in uppercase
+          return { captchaText, imagePath };
         }
       } catch (err) {
         console.error("Error solving CAPTCHA:", err.message);
