@@ -140,12 +140,14 @@ const attemptLogin = async (page, username, password, attempts = 1) => {
 const handlePostFormFIlled = async (page, docNoIdentifier) => {
   try {
     await delay(2000);
-    // await page.waitForNavigation({
-    //   waitUntil: ["networkidle2", "domcontentloaded"],
-    //   timeout: 60000,
-    // });
-    // await page.waitForSelector("#form1 > div.s_d > div.col-md-3.col-sm-4 > ol");
-
+    // Dynamically wait for navigation only if the page takes time to load
+    await Promise.race([
+      page.waitForNavigation({
+        waitUntil: ["networkidle2", "domcontentloaded"],
+        timeout: 60000,
+      }),
+      new Promise((resolve) => setTimeout(resolve, 5000)), // Timeout for fast-loading pages
+    ]);
     const checkboxes = await page.$$(
       "#form1 > div.s_d > div.col-md-3.col-sm-4 > ol input[type='checkbox']"
     );
@@ -168,9 +170,9 @@ const handlePostFormFIlled = async (page, docNoIdentifier) => {
     //   }
     //   logger.info("clicked on all check boxes");
     // } else {
-      // If fewer checkboxes, click the "Select All" button
-      await clickButton(page, "#checkall2");
-      logger.info("clicked on all check boxes");
+    // If fewer checkboxes, click the "Select All" button
+    await clickButton(page, "#checkall2");
+    logger.info("clicked on all check boxes");
     // }
 
     await Promise.all([
@@ -305,7 +307,7 @@ const searchByDocumentNumber = async (
     page,
     "#bean > div:nth-child(39) > div:nth-child(15) > button.btn.btn-default"
   );
-  logger.info("clicked submit button")
+  logger.info("clicked submit button");
   return await handlePostFormFIlled(page, docNoIdentifier);
 };
 

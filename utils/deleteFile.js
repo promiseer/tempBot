@@ -16,6 +16,11 @@ const deleteFile = async (filePath) => {
       logger.info(`File deleted successfully: ${filePath}`);
     }
   } catch (error) {
+    if (error.code === "ENOENT") {
+      logger.warn(`File not found, skipping deletion: ${filePath}`);
+    } else {
+      logger.error(`Error deleting file: ${error.message}`);
+    }
     logger.error(`Error deleting file: ${error.message}`);
   }
 };
