@@ -274,7 +274,7 @@ const savePdfToFile = async (pdfUrl, fileName) => {
 
     if (!data || !data.entries || data.entries.length === 0) {
       logger.error("No data extracted from the PDF.");
-      return;
+      return null;
     }
 
     generatePDF(data, filePath);
@@ -321,19 +321,17 @@ const selectDropdownOption = async (page, selector, text) => {
 
 // Helper function to handle CAPTCHA
 const handleCaptcha = async (page) => {
+  let captchaData; // To store the CAPTCHA data and image path
+
   try {
-    // Get CAPTCHA text using the same utility from AP code
-    const captchaData = await getCaptchaTextFromImage(
-      page,
-      "#captcha",
-      3,
-      1000
-    );
+    // Get CAPTCHA text and image path using the updated utility
+    captchaData = await getCaptchaTextFromImage(page, "#captcha", 3, 1000);
 
     // Fill CAPTCHA input field with id #txt_Captcha
     await page.type("#txt_Captcha", captchaData.captchaText);
     logger.info("Captcha solved and entered.");
 
+    // Return the image path for later deletion
     return captchaData.imagePath;
   } catch (error) {
     logger.error("Failed to solve captcha.");
@@ -343,6 +341,8 @@ const handleCaptcha = async (page) => {
 
 // Helper function to click "Search/View EC" li element and handle the process after it
 const clickSearchViewEC = async (page, sroName, docNo, docYear) => {
+  let captchaImagePath; // To store the CAPTCHA image path
+
   try {
     const found = await page.evaluate(() => {
       const element = Array.from(document.querySelectorAll("li, li span")).find(
@@ -401,8 +401,8 @@ const clickSearchViewEC = async (page, sroName, docNo, docYear) => {
 
         logger.info("Form filled successfully. Handling captcha...");
 
-        // Step 5: Solve captcha
-        const captchaImagePath = await handleCaptcha(page);
+        // Step 5: Solve captcha and get the image path
+        captchaImagePath = await handleCaptcha(page);
 
         // Step 6: Click the search button
         await clickButton(page, "#btn_SearchDoc");
@@ -448,7 +448,7 @@ const clickSearchViewEC = async (page, sroName, docNo, docYear) => {
               }
             });
           }
-          return;
+          return null;
         }
         logger.info("Element with 'generatePdf();' onClick handler appeared.");
 
@@ -509,17 +509,33 @@ const clickSearchViewEC = async (page, sroName, docNo, docYear) => {
 
         // Step 12: Download and save the PDF
         logger.info("Downloading PDF...");
-        await savePdfToFile(pdfUrl, "tn-encumbrance-certificate");
+        const filePath = await savePdfToFile(
+          pdfUrl,
+          "tn-encumbrance-certificate"
+        );
+
+        return filePath;
       } else {
         logger.error("'DOC_WISE' radio input not found.");
+        return null;
       }
     } else {
       logger.error("'Search/View EC' element not found.");
+      return null;
     }
   } catch (error) {
     logger.error("Error in clickSearchViewEC function.");
     logger.error(`Error message: ${error.message}`);
     logger.error(`Error stack: ${error.stack}`);
+    if (captchaImagePath) {
+      fs.unlink(captchaImagePath, (err) => {
+        if (err) {
+          console.error(`Failed to delete captcha image: ${err.message}`);
+        } else {
+          console.log(`Deleted captcha image: ${captchaImagePath}`);
+        }
+      });
+    }
     throw error;
   }
 };
@@ -540,6 +556,8 @@ const tnEcDownloader = async ({
 }) => {
   const browser = await puppeteerInstance();
   const page = await browser.newPage();
+  logger.info(":: TN EC Downloader Automation Started");
+  let filePath;
 
   try {
     // Step 1: Go to the Tamil Nadu registration portal
@@ -565,19 +583,27 @@ const tnEcDownloader = async ({
       // Step 4: Wait for the new page to load completely
       await page.waitForNavigation({ waitUntil: "networkidle0" });
 
-      // Step 5: Click the "Search/View EC" li element
-      await clickSearchViewEC(page, sroName, docNo, docYear);
+      // Step 5: Click the "Search/View EC" li element and get the file path
+      filePath = await clickSearchViewEC(page, sroName, docNo, docYear);
     } else {
       logger.info(
         "The 'fontSelection' element does not contain 'English', skipping the click."
       );
     }
+
+    await browser.close();
+
+    if (filePath) {
+      return { status: "ok", filePath };
+    } else {
+      return { status: "error", filePath: null };
+    }
   } catch (error) {
     logger.error("Error in tnEcDownloader function.");
     logger.error(`Error message: ${error.message}`);
     logger.error(`Error stack: ${error.stack}`);
-  } finally {
     await browser.close();
+    throw error;
   }
 };
 
