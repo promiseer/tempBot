@@ -522,7 +522,7 @@ const apEcDownloader = async ({
           docNo,
           docYear
         );
-        sros = multipleSros.join(",");
+        sros = multipleSros.join(", ");
         await page.close();
 
         break;
@@ -569,7 +569,7 @@ const apEcDownloader = async ({
           block,
           district
         );
-        sros = multipleSros.join(",");
+        sros = multipleSros.join(", ");
         await page.close();
 
         break;
