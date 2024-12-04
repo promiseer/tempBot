@@ -137,7 +137,8 @@ const handleMultipleSro = async (
   houseNo,
   ward,
   block,
-  district
+  district,
+  aliasName
 ) => {
   const tasks = [];
 
@@ -160,11 +161,13 @@ const handleMultipleSro = async (
     if (
       [
         "ENCUMBRANCE_TYPE.HNMS",
+        "ENCUMBRANCE_TYPE.SNMS",
         "ENCUMBRANCE_TYPE.SHNMS",
         "ENCUMBRANCE_TYPE.SSNMS",
         "ENCUMBRANCE_TYPE.SASNMS",
       ].includes(encumbranceType)
     ) {
+      sroPair.unshift(sroName);
       tasks.push(
         await ScrapeByNone(
           encumbranceType,
@@ -179,6 +182,7 @@ const handleMultipleSro = async (
           sroPair,
           ownerName,
           startDate,
+          aliasName,
           `${docNo}-${i}` // Unique identifier for each task
         )
       );
@@ -299,6 +303,7 @@ const ScrapeByNone = async (
   multipleSros,
   ownerName,
   startDate,
+  aliasName,
   docNoIdentifier
 ) => {
   let filePath;
@@ -332,6 +337,7 @@ const ScrapeByNone = async (
       "#react-select-3-input",
       [
         "ENCUMBRANCE_TYPE.HNMS",
+        "ENCUMBRANCE_TYPE.SNMS",
         "ENCUMBRANCE_TYPE.SHNMS",
         "ENCUMBRANCE_TYPE.SSNMS",
         "ENCUMBRANCE_TYPE.SASNMS",
@@ -350,6 +356,7 @@ const ScrapeByNone = async (
       [
         "ENCUMBRANCE_TYPE.HNOS",
         "ENCUMBRANCE_TYPE.HNMS",
+        "ENCUMBRANCE_TYPE.SNMS",
         "ENCUMBRANCE_TYPE.SHNOS",
         "ENCUMBRANCE_TYPE.SHNMS",
         "ENCUMBRANCE_TYPE.SNOS",
@@ -361,12 +368,14 @@ const ScrapeByNone = async (
         sroName,
         surveyNo,
         houseNo,
+        flatNo,
+        plotNo,
         ward,
         block,
         village,
         startDate,
-        encumbranceType
-      ); //@todo: add alias if required
+        aliasName
+      );
     }
 
     if (
@@ -376,9 +385,10 @@ const ScrapeByNone = async (
     ) {
       await fillSurveyDetails(
         page,
+        plotNo,
         surveyNo,
         village,
-        encumbranceType,
+        aliasName,
         startDate
       );
     }
@@ -418,13 +428,22 @@ const fillBuildingDetails = async (
   sroName,
   surveyNo,
   houseNo,
+  flatNo,
+  plotNo,
   ward,
   block,
   village,
   startDate,
-  encumbranceType
+  aliasName
 ) => {
   await fillInput(page, 'input[name="houseNo"]', houseNo);
+  flatNo
+    ? await fillInput(page, 'input[name="flatNo"]', flatNo)
+    : logger.info("Skipping flatNo input as it's empty");
+
+  plotNo
+    ? await fillInput(page, 'input[name="plotOrBiNo"]', plotNo)
+    : logger.info("Skipping plotNo input as it's empty");
 
   await fillInput(page, 'input[name="inSurveyNo"]', surveyNo);
 
@@ -435,8 +454,8 @@ const fillBuildingDetails = async (
     ? await fillInput(page, 'input[name="blockNo"]', block)
     : logger.info("Skipping block no input as it's empty");
   await fillInput(page, 'input[name="villageOrCity"]', village);
-  sroName
-    ? await fillInput(page, 'input[name="alias"]', sroName)
+  aliasName
+    ? await fillInput(page, 'input[name="aliasName"]', aliasName)
     : logger.info("Skipping Alias input as it's empty");
 
   startDate
@@ -447,15 +466,22 @@ const fillBuildingDetails = async (
 // Fill the survey details form for Sites or Agricultural Lands
 const fillSurveyDetails = async (
   page,
+  plotNo,
   survey,
   village,
-  encumbranceType,
+  aliasName,
   startDate
 ) => {
   await clickButton(page, '.form-check-input[value="BS"]');
   await clickButton(page, '.form-check-input[value="SAL"]');
+  plotNo
+    ? await fillInput(page, 'input[name="plotOrBiNo"]', plotNo)
+    : logger.info("Skipping plotNo input as it's empty");
+
   await fillInput(page, 'input[name="inSurveyNo"]', survey);
   await fillInput(page, 'input[name="revenueVillage"]', village);
+  await fillInput(page, 'input[name="revenueAlias"]', aliasName); //aliasName
+
   startDate
     ? await page.type('input[name="periodOfSearchFrom"]', startDate)
     : logger.info("Skipping Date input as it's empty");
@@ -488,6 +514,7 @@ const apEcDownloader = async ({
   district,
   encumbranceType,
   startDate,
+  aliasName,
 }) => {
   const browser = await puppeteerInstance();
   const page = await browser.newPage();
@@ -543,6 +570,7 @@ const apEcDownloader = async ({
           multipleSros,
           ownerName,
           startDate,
+          aliasName,
           docNo //docIdentifier
         );
         await page.close();
@@ -550,6 +578,7 @@ const apEcDownloader = async ({
         break;
 
       case "ENCUMBRANCE_TYPE.HNMS":
+      case "ENCUMBRANCE_TYPE.SNMS":
       case "ENCUMBRANCE_TYPE.SHNMS":
       case "ENCUMBRANCE_TYPE.SSNMS":
       case "ENCUMBRANCE_TYPE.SASNMS":
@@ -567,7 +596,8 @@ const apEcDownloader = async ({
           houseNo,
           ward,
           block,
-          district
+          district,
+          aliasName
         );
         sros = multipleSros.join(", ");
         await page.close();
