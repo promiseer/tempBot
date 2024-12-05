@@ -138,7 +138,9 @@ const handleMultipleSro = async (
   ward,
   block,
   district,
-  aliasName
+  aliasName,
+  flatNo,
+  plotNo
 ) => {
   const tasks = [];
 
@@ -183,7 +185,9 @@ const handleMultipleSro = async (
           ownerName,
           startDate,
           aliasName,
-          `${docNo}-${i}` // Unique identifier for each task
+          `${docNo}-${i}`, // Unique identifier for each task
+          flatNo,
+          plotNo
         )
       );
     }
@@ -304,7 +308,9 @@ const ScrapeByNone = async (
   ownerName,
   startDate,
   aliasName,
-  docNoIdentifier
+  docNoIdentifier,
+  flatNo,
+  plotNo
 ) => {
   let filePath;
   try {
@@ -455,7 +461,7 @@ const fillBuildingDetails = async (
     : logger.info("Skipping block no input as it's empty");
   await fillInput(page, 'input[name="villageOrCity"]', village);
   aliasName
-    ? await fillInput(page, 'input[name="aliasName"]', aliasName)
+    ? await fillInput(page, 'input[name="alias"]', aliasName)
     : logger.info("Skipping Alias input as it's empty");
 
   startDate
@@ -515,6 +521,8 @@ const apEcDownloader = async ({
   encumbranceType,
   startDate,
   aliasName,
+  plotNo,
+  flatNo,
 }) => {
   const browser = await puppeteerInstance();
   const page = await browser.newPage();
@@ -571,7 +579,9 @@ const apEcDownloader = async ({
           ownerName,
           startDate,
           aliasName,
-          docNo //docIdentifier
+          docNo, //docIdentifier,
+          flatNo,
+          plotNo
         );
         await page.close();
 
@@ -597,7 +607,9 @@ const apEcDownloader = async ({
           ward,
           block,
           district,
-          aliasName
+          aliasName,
+          flatNo,
+          plotNo
         );
         sros = multipleSros.join(", ");
         await page.close();
