@@ -156,7 +156,7 @@ const handleMultipleSro = async (
           sroName,
           sroPair, // Pass individual SRO from the pair
           startDate,
-          `${docNo}-${i}` // Unique identifier for each task
+          `${encumbranceType}-${i}` // Unique identifier for each task
         )
       );
     }
@@ -185,7 +185,7 @@ const handleMultipleSro = async (
           ownerName,
           startDate,
           aliasName,
-          `${docNo}-${i}`, // Unique identifier for each task
+          `${encumbranceType}-${i}`, // Unique identifier for each task
           flatNo,
           plotNo
         )
@@ -193,7 +193,7 @@ const handleMultipleSro = async (
     }
   }
   const filePaths = await Promise.all(tasks);
-  const filePath = await mergePDFs(filePaths, `public/Downloads/${docNo}.pdf`);
+  const filePath = await mergePDFs(filePaths, `public/Downloads/${encumbranceType}.pdf`);
   return filePath;
 };
 
@@ -540,7 +540,7 @@ const apEcDownloader = async ({
           sroName,
           multipleSros,
           startDate,
-          docNo //docIdentifier
+          encumbranceType //docIdentifier
         );
         await page.close();
 
@@ -579,7 +579,7 @@ const apEcDownloader = async ({
           ownerName,
           startDate,
           aliasName,
-          docNo, //docIdentifier,
+          encumbranceType, //docIdentifier,
           flatNo,
           plotNo
         );
