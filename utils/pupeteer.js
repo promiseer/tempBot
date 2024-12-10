@@ -126,17 +126,21 @@ const clickButton = async (page, selector, maxAttempts = 3, sleep = 1000) => {
 };
 
 const responseValidator = async (page, url) => {
-  const response = await page.waitForResponse(
-    (response) => response.url() === url && response.status() === 200
-  );
-  const contentType = response.headers()["content-type"];
+  try {
+    const response = await page.waitForResponse(
+      (response) => response.url() === url && response.status() === 200
+    );
+    const contentType = response.headers()["content-type"];
 
-  // Check if the response is JSON
-  if (contentType && contentType.includes("application/json")) {
-    return await response.json(); // Parse and return JSON response
-  } else {
-    return await response.text(); // Return plain text or other format
-  } // Return the response body (assuming it's JSON)
+    // Check if the response is JSON
+    if (contentType && contentType.includes("application/json")) {
+      return await response.json(); // Parse and return JSON response
+    } else {
+      return await response.text(); // Return plain text or other format
+    } // Return the response body (assuming it's JSON)
+  } catch (error) {
+    logger.error(error.message);
+  }
 };
 
 const getCaptchaText = async (

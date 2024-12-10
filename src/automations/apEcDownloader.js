@@ -193,7 +193,10 @@ const handleMultipleSro = async (
     }
   }
   const filePaths = await Promise.all(tasks);
-  const filePath = await mergePDFs(filePaths, `public/Downloads/${encumbranceType}.pdf`);
+  const filePath = await mergePDFs(
+    filePaths,
+    `public/Downloads/${encumbranceType}.pdf`
+  );
   return filePath;
 };
 
@@ -258,7 +261,7 @@ const handleSecondForm = async (
       "https://registration.ec.ap.gov.in/ecSearchAPI/v1/public/getLinkDocumentsByPropertyDetails"
     );
 
-    if (!Object.entries(docs.data.documentList).length) {
+    if (!docs || !Object.entries(docs?.data?.documentList).length) {
       return false;
     }
     await clickButton(page, "#selectAllId");
@@ -407,7 +410,7 @@ const ScrapeByNone = async (
       "https://registration.ec.ap.gov.in/ecSearchAPI/v1/public/getLinkDocumentsByPropertyDetails"
     );
 
-    if (!Object.entries(docs.data.documentList).length) {
+    if (!docs || !Object.entries(docs?.data?.documentList).length) {
       logger.error("Documents not found on search data.");
       return dummyFilePath;
     }
@@ -624,7 +627,7 @@ const apEcDownloader = async ({
     await browser.close();
     return { status: "ok", filePath, sros };
   } catch (error) {
-    logger.info(error.message);
+    logger.error(error.message);
 
     throw new Error(error.message);
   } finally {
