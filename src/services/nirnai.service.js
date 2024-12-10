@@ -39,7 +39,7 @@ const createAttachement = async (
   file,
   sros,
   encumbranceType,
-  { docNo, docYear, houseNo, surveyNo , identifier, propertyType}
+  { docNo, docYear, houseNo, surveyNo , identifier, propertyType, plotNo, flatNo, aliasName}
 ) => {
   if (!caseId || !file) {
     logger.error("requested parameters not found");
@@ -48,7 +48,7 @@ const createAttachement = async (
 
   try {
     const token = await getToken();
-    const params = `Doc: ${docNo} Year: ${docYear} SRO: ${sros} H.No: ${houseNo} Sy.No: ${surveyNo}`;
+    const params = `Doc: ${docNo} Year: ${docYear} SRO: ${sros} H.No: ${houseNo} Sy.No: ${surveyNo} P.No:${plotNo} F.NO:${flatNo} Alias:${aliasName}`;
     const response = await axios.post(
       `${backendUrl}/request/create/attachments`,
       {
