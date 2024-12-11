@@ -35,7 +35,6 @@ const generateEcJobs = async (req, res) => {
       district,
       village,
       sroName,
-      multipleSros,
       encumbranceTypes,
       identifier,
       propertyType
