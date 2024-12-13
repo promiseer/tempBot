@@ -324,7 +324,9 @@ const searchByProperty = async (
   sroName,
   startDate,
   docNoIdentifier,
-  propertyType
+  propertyType,
+  plotNo,
+  flatNo
 ) => {
   page = await handleLogin(page, browser);
   await delay(1000);
@@ -343,23 +345,34 @@ const searchByProperty = async (
   await delay(2000);
 
   if (
-    ["ENCUMBRANCE_TYPE.HNOS", "ENCUMBRANCE_TYPE.SHNOS"].includes(
-      encumbranceType
-    )
+    [
+      "ENCUMBRANCE_TYPE.HNOS",
+      "ENCUMBRANCE_TYPE.FNOS",
+      "ENCUMBRANCE_TYPE.SHNOS",
+    ].includes(encumbranceType)
   ) {
-    await fillBuildingDetails(page, encumbranceType, houseNo, ward, block);
+    await fillBuildingDetails(
+      page,
+      encumbranceType,
+      houseNo,
+      ward,
+      block,
+      flatNo
+    );
   }
 
   if (
-    ["ENCUMBRANCE_TYPE.SNOS", "ENCUMBRANCE_TYPE.SSNOS"].includes(
-      encumbranceType
-    )
+    [
+      "ENCUMBRANCE_TYPE.SNOS",
+      "ENCUMBRANCE_TYPE.PNOS",
+      "ENCUMBRANCE_TYPE.SSNOS",
+    ].includes(encumbranceType)
   ) {
     await fillSurveyDetails(
       page,
       encumbranceType,
       surveyNo,
-      houseNo,
+      plotNo,
       propertyType
     );
   }
@@ -386,13 +399,16 @@ const fillBuildingDetails = async (
   encumbranceType,
   houseNo,
   ward,
-  block
+  block,
+  flatNo
 ) => {
   //building structures
   await fillInput(page, "#house_no", houseNo); //House No
 
   //for flat no
-  await fillInput(page, "#flat_no", houseNo); //Flat No
+  ["ENCUMBRANCE_TYPE.FNOS"].includes(encumbranceType)
+    ? await fillInput(page, "#flat_no", flatNo)
+    : logger.info("Skipping ward input as it's empty"); //ward no //Flat No
   // await fillInput(page, "#apt", ""); //Apartment
 
   //for ward/block
@@ -409,13 +425,13 @@ const fillSurveyDetails = async (
   page,
   encumbranceType,
   surveyNo,
-  plot_no,
+  plotNo,
   propertyType
 ) => {
   //agricultural lands
-  propertyType === "PROPERTY_TYPE.VACANT_LAND"
-    ? await fillInput(page, "#plot_no", plot_no)
-    : logger.info("Skipping plot_no input as it's empty"); //plot_no
+  ["ENCUMBRANCE_TYPE.PNOS"].includes(encumbranceType)
+    ? await fillInput(page, "#plot_no", plotNo)
+    : logger.info("Skipping plotNo input as it's empty"); //plot_no
 
   await fillInput(page, "#sy_no", surveyNo); //sy_no
 };
@@ -443,6 +459,8 @@ const tgEcDownloader = async ({
   encumbranceType,
   startDate,
   propertyType,
+  plotNo,
+  flatNo,
 }) => {
   const browser = await puppeteerInstance();
   let page = await browser.newPage();
@@ -467,6 +485,8 @@ const tgEcDownloader = async ({
         break;
 
       case "ENCUMBRANCE_TYPE.HNOS":
+      case "ENCUMBRANCE_TYPE.PNOS":
+      case "ENCUMBRANCE_TYPE.FNOS":
       case "ENCUMBRANCE_TYPE.SHNOS":
       case "ENCUMBRANCE_TYPE.SNOS":
       case "ENCUMBRANCE_TYPE.SSNOS":
@@ -483,7 +503,9 @@ const tgEcDownloader = async ({
           sroName,
           startDate,
           docNo,
-          propertyType
+          propertyType,
+          plotNo,
+          flatNo
         );
         await page.close();
         break;
