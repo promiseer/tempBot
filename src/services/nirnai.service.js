@@ -106,7 +106,7 @@ const getParams = (
     case "ENCUMBRANCE_TYPE.HNMS":
     case "ENCUMBRANCE_TYPE.SHNOS":
     case "ENCUMBRANCE_TYPE.SHNMS":
-      params = `SRO: ${sros} H.No: ${houseNo} Alias:${aliasName}`;
+      params = `H.No: ${houseNo} Alias:${aliasName} SRO: ${sros}`;
       break;
 
     case "ENCUMBRANCE_TYPE.SNOS":
@@ -117,17 +117,17 @@ const getParams = (
     case "ENCUMBRANCE_TYPE.ASNMS":
     case "ENCUMBRANCE_TYPE.SASNOS":
     case "ENCUMBRANCE_TYPE.SASNMS":
-      params = `SRO: ${sros} Sy.No: ${surveyNo} Alias:${aliasName}`;
+      params = `Sy.No: ${surveyNo} Alias:${aliasName} SRO: ${sros}`;
       break;
 
     case "ENCUMBRANCE_TYPE.PNOS":
     case "ENCUMBRANCE_TYPE.PNMS":
-      params = `SRO: ${sros} H.No: ${houseNo} Sy.No: ${surveyNo} P.NO:${plotNo} Alias:${aliasName}`;
+      params = `P.NO:${plotNo} H.No: ${houseNo} Sy.No: ${surveyNo} Alias:${aliasName} SRO: ${sros}`;
       break;
 
     case "ENCUMBRANCE_TYPE.FNOS":
     case "ENCUMBRANCE_TYPE.FNMS":
-      params = `SRO: ${sros} H.No: ${houseNo} Sy.No: ${surveyNo} F.NO:${flatNo} Alias:${aliasName}`;
+      params = `F.NO:${flatNo}  H.No: ${houseNo} Sy.No: ${surveyNo} Alias:${aliasName} SRO: ${sros}`;
       break;
 
     default:
