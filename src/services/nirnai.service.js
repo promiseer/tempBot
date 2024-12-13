@@ -39,7 +39,7 @@ const createAttachement = async (
   file,
   sros,
   encumbranceType,
-  { docNo, docYear, houseNo, surveyNo , identifier, propertyType, plotNo, flatNo, aliasName}
+  caseData
 ) => {
   if (!caseId || !file) {
     logger.error("requested parameters not found");
@@ -48,7 +48,7 @@ const createAttachement = async (
 
   try {
     const token = await getToken();
-    const params = `Doc: ${docNo} Year: ${docYear} SRO: ${sros} H.No: ${houseNo} Sy.No: ${surveyNo} P.No:${plotNo} F.NO:${flatNo} Alias:${aliasName}`;
+    const params = getParams(encumbranceType, sros, caseData);
     const response = await axios.post(
       `${backendUrl}/request/create/attachments`,
       {
@@ -68,8 +68,8 @@ const createAttachement = async (
             isBot: true,
             encumbranceType,
             params,
-            identifier,
-            propertyType
+            identifier: caseData.identifier,
+            propertyType: caseData.propertyType,
           },
         ],
       },
@@ -88,5 +88,51 @@ const createAttachement = async (
     logger.error(`Error during login: ${error}`);
     throw error;
   }
+};
+
+const getParams = (
+  EcType,
+  sros,
+  { docNo, docYear, houseNo, surveyNo, plotNo, flatNo, aliasName }
+) => {
+  let params = "";
+  switch (EcType) {
+    case "ENCUMBRANCE_TYPE.DNOS":
+    case "ENCUMBRANCE_TYPE.DNMS":
+      params = `Doc: ${docNo} Year: ${docYear} SRO: ${sros} Alias:${aliasName}`;
+      break;
+
+    case "ENCUMBRANCE_TYPE.HNOS":
+    case "ENCUMBRANCE_TYPE.HNMS":
+    case "ENCUMBRANCE_TYPE.SHNOS":
+    case "ENCUMBRANCE_TYPE.SHNMS":
+      params = `SRO: ${sros} H.No: ${houseNo} Alias:${aliasName}`;
+      break;
+
+    case "ENCUMBRANCE_TYPE.SNOS":
+    case "ENCUMBRANCE_TYPE.SNMS":
+    case "ENCUMBRANCE_TYPE.SSNOS":
+    case "ENCUMBRANCE_TYPE.SSNMS":
+    case "ENCUMBRANCE_TYPE.ASNOS":
+    case "ENCUMBRANCE_TYPE.ASNMS":
+    case "ENCUMBRANCE_TYPE.SASNOS":
+    case "ENCUMBRANCE_TYPE.SASNMS":
+      params = `SRO: ${sros} Sy.No: ${surveyNo} Alias:${aliasName}`;
+      break;
+
+    case "ENCUMBRANCE_TYPE.PNOS":
+    case "ENCUMBRANCE_TYPE.PNMS":
+      params = `SRO: ${sros} H.No: ${houseNo} Sy.No: ${surveyNo} P.NO:${plotNo} Alias:${aliasName}`;
+      break;
+
+    case "ENCUMBRANCE_TYPE.FNOS":
+    case "ENCUMBRANCE_TYPE.FNMS":
+      params = `SRO: ${sros} H.No: ${houseNo} Sy.No: ${surveyNo} F.NO:${flatNo} Alias:${aliasName}`;
+      break;
+
+    default:
+      break;
+  }
+  return params;
 };
 module.exports = { getToken, createAttachement };
