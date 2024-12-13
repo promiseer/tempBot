@@ -99,7 +99,7 @@ const getParams = (
   switch (EcType) {
     case "ENCUMBRANCE_TYPE.DNOS":
     case "ENCUMBRANCE_TYPE.DNMS":
-      params = `Doc: ${docNo} Year: ${docYear} SRO: ${sros} Alias:${aliasName}`;
+      params = `Doc: ${docNo} Year: ${docYear} SRO: ${sros}`;
       break;
 
     case "ENCUMBRANCE_TYPE.HNOS":
