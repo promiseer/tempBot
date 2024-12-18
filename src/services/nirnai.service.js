@@ -50,7 +50,7 @@ const createAttachement = async (
 
   try {
     const token = await getToken();
-    const { params, notUsedparams } = getParams(
+    const { params, noUsedParams } = getParams(
       encumbranceType,
       sros,
       caseData
@@ -74,7 +74,7 @@ const createAttachement = async (
             isBot: true,
             encumbranceType,
             params,
-            notUsedparams,
+            noUsedParams,
             botRun:caseData.botRun+1,
             identifier: caseData.identifier,
             propertyType: caseData.propertyType,
@@ -103,15 +103,15 @@ const getParams = (
   sros,
   { docNo, docYear, houseNo, surveyNo, plotNo, flatNo, aliasName, startDate }
 ) => {
-  const endDate = moment().subtract(1, "days").format("DD-MM-YYYY");
+  const endDate = moment().subtract(1, "days").format("DD/MM/YYYY");
 
   let params = "";
-  let notUsedparams = "";
+  let noUsedParams = "";
   switch (EcType) {
     case "ENCUMBRANCE_TYPE.DNOS":
     case "ENCUMBRANCE_TYPE.DNMS":
       params = `Doc: ${docNo} Year: ${docYear} SRO: ${sros} EC Search: ${startDate} - ${endDate}`;
-      notUsedparams = `H.No: ${houseNo} Sy.No: ${surveyNo} P.NO:${plotNo} F.NO:${flatNo} Alias:${aliasName}`;
+      noUsedParams = `H.No: ${houseNo} Sy.No: ${surveyNo} P.NO:${plotNo} F.NO:${flatNo} Alias:${aliasName}`;
       break;
 
     case "ENCUMBRANCE_TYPE.HNOS":
@@ -119,7 +119,7 @@ const getParams = (
     case "ENCUMBRANCE_TYPE.SHNOS":
     case "ENCUMBRANCE_TYPE.SHNMS":
       params = `H.No: ${houseNo} Alias:${aliasName} SRO: ${sros} EC Search: ${startDate} - ${endDate}`;
-      notUsedparams = `Doc: ${docNo} Year: ${docYear} Sy.No: ${surveyNo} P.NO: ${plotNo} F.NO: ${flatNo}`;
+      noUsedParams = `Doc: ${docNo} Year: ${docYear} Sy.No: ${surveyNo} P.NO: ${plotNo} F.NO: ${flatNo}`;
       break;
 
     case "ENCUMBRANCE_TYPE.SNOS":
@@ -131,24 +131,24 @@ const getParams = (
     case "ENCUMBRANCE_TYPE.SASNOS":
     case "ENCUMBRANCE_TYPE.SASNMS":
       params = `Sy.No: ${surveyNo} Alias:${aliasName} SRO: ${sros} EC Search: ${startDate} - ${endDate}`;
-      notUsedparams = `Doc: ${docNo} Year: ${docYear} H.No: ${houseNo} P.NO:${plotNo} F.NO: ${flatNo}`;
+      noUsedParams = `Doc: ${docNo} Year: ${docYear} H.No: ${houseNo} P.NO:${plotNo} F.NO: ${flatNo}`;
       break;
 
     case "ENCUMBRANCE_TYPE.PNOS":
     case "ENCUMBRANCE_TYPE.PNMS":
       params = `P.NO: ${plotNo} H.No: ${houseNo} Sy.No: ${surveyNo} Alias:${aliasName} SRO: ${sros} EC Search: ${startDate} - ${endDate}`;
-      notUsedparams = `Doc: ${docNo} Year: ${docYear} F.NO: ${flatNo}`;
+      noUsedParams = `Doc: ${docNo} Year: ${docYear} F.NO: ${flatNo}`;
       break;
 
     case "ENCUMBRANCE_TYPE.FNOS":
     case "ENCUMBRANCE_TYPE.FNMS":
       params = `F.NO: ${flatNo}  H.No: ${houseNo} Sy.No: ${surveyNo} Alias:${aliasName} SRO: ${sros} EC Search: ${startDate} - ${endDate}`;
-      notUsedparams = `Doc: ${docNo} Year: ${docYear} P.NO: ${plotNo}`;
+      noUsedParams = `Doc: ${docNo} Year: ${docYear} P.NO: ${plotNo}`;
       break;
 
     default:
       break;
   }
-  return { params, notUsedparams };
+  return { params, noUsedParams };
 };
 module.exports = { getToken, createAttachement };
