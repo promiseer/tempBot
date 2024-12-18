@@ -1,5 +1,7 @@
 const axios = require("axios"); // You can use axios for HTTP requests
 const logger = require("../../utils/logger");
+const moment = require("moment");
+
 const {
   backendUrl,
   adminEmail,
@@ -48,7 +50,7 @@ const createAttachement = async (
 
   try {
     const token = await getToken();
-    const params = getParams(encumbranceType, sros, caseData);
+    const params = getParams(encumbranceType, sros, caseData);    
     const response = await axios.post(
       `${backendUrl}/request/create/attachments`,
       {
@@ -93,20 +95,22 @@ const createAttachement = async (
 const getParams = (
   EcType,
   sros,
-  { docNo, docYear, houseNo, surveyNo, plotNo, flatNo, aliasName }
+  { docNo, docYear, houseNo, surveyNo, plotNo, flatNo, aliasName ,startDate}
 ) => {
+  const endDate = moment().subtract(1, 'days').format("DD/MM/YYYY");
+
   let params = "";
   switch (EcType) {
     case "ENCUMBRANCE_TYPE.DNOS":
     case "ENCUMBRANCE_TYPE.DNMS":
-      params = `Doc: ${docNo} Year: ${docYear} SRO: ${sros}`;
+      params = `Doc: ${docNo} Year: ${docYear} SRO: ${sros} EC Search: ${startDate} - ${endDate}`;
       break;
 
     case "ENCUMBRANCE_TYPE.HNOS":
     case "ENCUMBRANCE_TYPE.HNMS":
     case "ENCUMBRANCE_TYPE.SHNOS":
     case "ENCUMBRANCE_TYPE.SHNMS":
-      params = `H.No: ${houseNo} Alias:${aliasName} SRO: ${sros}`;
+      params = `H.No: ${houseNo} Alias:${aliasName} SRO: ${sros} EC Search: ${startDate} - ${endDate}`;
       break;
 
     case "ENCUMBRANCE_TYPE.SNOS":
@@ -117,17 +121,17 @@ const getParams = (
     case "ENCUMBRANCE_TYPE.ASNMS":
     case "ENCUMBRANCE_TYPE.SASNOS":
     case "ENCUMBRANCE_TYPE.SASNMS":
-      params = `Sy.No: ${surveyNo} Alias:${aliasName} SRO: ${sros}`;
+      params = `Sy.No: ${surveyNo} Alias:${aliasName} SRO: ${sros} EC Search: ${startDate} - ${endDate}`;
       break;
 
     case "ENCUMBRANCE_TYPE.PNOS":
     case "ENCUMBRANCE_TYPE.PNMS":
-      params = `P.NO:${plotNo} H.No: ${houseNo} Sy.No: ${surveyNo} Alias:${aliasName} SRO: ${sros}`;
+      params = `P.NO:${plotNo} H.No: ${houseNo} Sy.No: ${surveyNo} Alias:${aliasName} SRO: ${sros} EC Search: ${startDate} - ${endDate}`;
       break;
 
     case "ENCUMBRANCE_TYPE.FNOS":
     case "ENCUMBRANCE_TYPE.FNMS":
-      params = `F.NO:${flatNo}  H.No: ${houseNo} Sy.No: ${surveyNo} Alias:${aliasName} SRO: ${sros}`;
+      params = `F.NO:${flatNo}  H.No: ${houseNo} Sy.No: ${surveyNo} Alias:${aliasName} SRO: ${sros} EC Search: ${startDate} - ${endDate}`;
       break;
 
     default:
