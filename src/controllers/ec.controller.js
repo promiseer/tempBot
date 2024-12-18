@@ -30,8 +30,6 @@ const generateEcJobs = async (req, res) => {
     const requiredParams = {
       state,
       caseId,
-      docNo,
-      docYear,
       district,
       village,
       sroName,
