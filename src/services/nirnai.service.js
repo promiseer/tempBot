@@ -103,7 +103,7 @@ const getParams = (
   sros,
   { docNo, docYear, houseNo, surveyNo, plotNo, flatNo, aliasName, startDate }
 ) => {
-  const endDate = moment().subtract(1, "days").format("DD/MM/YYYY");
+  const endDate = moment().subtract(1, "days").format("DD-MM-YYYY");
 
   let params = "";
   let notUsedparams = "";
