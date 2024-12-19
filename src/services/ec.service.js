@@ -24,7 +24,7 @@ const generateCombinations = (inputString, delimiter) => {
     combinations.push(currentCombination);
   }
 
-  return combinations.slice(1, -1);
+  return combinations.slice(delimiterSequence.length > 2 ? 1 : 0, -1);
 };
 
 const encumbranceMapping = {
