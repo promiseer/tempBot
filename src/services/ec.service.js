@@ -9,15 +9,16 @@ const getSplitJobs = async (items, field, jobData) => {
 };
 
 const extractDelimiters = (inputString, delimiter) => {
-  const regex = new RegExp(`[${delimiter}]`, "g");
-  return inputString.match(regex) || [];
+  return inputString.match(delimiter) || [];
 };
 
 const generateCombinations = (inputString, delimiter) => {
+  const regex = new RegExp(`[${delimiter}]`, "g");
   let combinations = [];
   let currentCombination = "";
-  const parts = inputString.split(delimiter);
-  const delimiterSequence = extractDelimiters(inputString, delimiter);
+
+  const parts = inputString.split(regex);
+  const delimiterSequence = extractDelimiters(inputString, regex);
   for (let i = 0; i < parts.length; i++) {
     currentCombination += (i > 0 ? delimiterSequence[i - 1] : "") + parts[i];
     combinations.push(currentCombination);
