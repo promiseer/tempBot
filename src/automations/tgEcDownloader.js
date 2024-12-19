@@ -479,7 +479,7 @@ const tgEcDownloader = async ({
           sroName,
           multipleSros,
           startDate,
-          docNo
+          encumbranceType, //docIdentifier,
         );
         await page.close();
         break;
@@ -502,7 +502,7 @@ const tgEcDownloader = async ({
           district,
           sroName,
           startDate,
-          docNo,
+          encumbranceType,
           propertyType,
           plotNo,
           flatNo
