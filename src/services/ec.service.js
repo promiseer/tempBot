@@ -8,17 +8,28 @@ const getSplitJobs = async (items, field, jobData) => {
   return jobs.map((job) => job.id);
 };
 
+const extractDelimiters = (inputString, delimiter) => {
+  const regex = new RegExp(`[${delimiter}]`, "g");
+  return inputString.match(regex) || [];
+};
+
 const generateCombinations = (inputString, delimiter) => {
-  let parts = inputString.split(delimiter);
-  return parts
-    .slice(0, parts.length - 1)
-    .map((_, i) => parts.slice(0, i + 1).join(delimiter)); //@TODO: update delimeter
+  let combinations = [];
+  let currentCombination = "";
+  const parts = inputString.split(delimiter);
+  const delimiterSequence = extractDelimiters(inputString, delimiter);
+  for (let i = 0; i < parts.length; i++) {
+    currentCombination += (i > 0 ? delimiterSequence[i - 1] : "") + parts[i];
+    combinations.push(currentCombination);
+  }
+
+  return combinations.slice(1, -1);
 };
 
 const encumbranceMapping = {
   houseNo: {
     types: ["ENCUMBRANCE_TYPE.SHNOS", "ENCUMBRANCE_TYPE.SHNMS"],
-    splitter: "/",
+    splitter: "-/",
   },
   surveyNo: {
     types: [
