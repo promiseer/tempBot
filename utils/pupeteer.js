@@ -211,7 +211,8 @@ const generatePDF = async (page, tableSelector, filePath) => {
   <title>Extracted Table PDF</title>
   <style>
       table {
-          border-collapse: collapse !important;;
+          border-collapse: collapse !important;
+          width: 80%;
       }
 
       td, th {
@@ -222,6 +223,7 @@ const generatePDF = async (page, tableSelector, filePath) => {
           word-wrap: break-word; /* Allow text to wrap inside the cells */
           white-space: normal; /* Ensure content wraps inside cells */
           overflow-wrap: break-word; /* Break words that are too long */
+          max-width: 200px; /* Adjust the width as needed */
       }
       thead {
           display: table-header-group; /* Repeat header on each page */
