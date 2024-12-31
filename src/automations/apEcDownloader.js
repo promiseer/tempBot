@@ -478,7 +478,10 @@ const fillBuildingDetails = async (
     : logger.info("Skipping Alias input as it's empty");
 
   startDate
-    ? await page.type('input[name="periodOfSearchFrom"]', moment(startDate, "DD/MM/YYYY").format("DD-MM-YYYY"))
+    ? await page.type(
+        'input[name="periodOfSearchFrom"]',
+        moment(startDate, "DD/MM/YYYY").format("DD-MM-YYYY")
+      )
     : logger.info("Skipping Date input as it's empty");
 };
 
@@ -502,7 +505,10 @@ const fillSurveyDetails = async (
   await fillInput(page, 'input[name="revenueAlias"]', aliasName); //aliasName
 
   startDate
-    ? await page.type('input[name="periodOfSearchFrom"]', moment(startDate, "DD/MM/YYYY").format("DD-MM-YYYY"))
+    ? await page.type(
+        'input[name="periodOfSearchFrom"]',
+        moment(startDate, "DD/MM/YYYY").format("DD-MM-YYYY")
+      )
     : logger.info("Skipping Date input as it's empty");
 };
 
