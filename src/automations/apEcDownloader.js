@@ -454,8 +454,8 @@ const fillBuildingDetails = async (
   startDate,
   aliasName,
   encumbranceType
-) => {
-  await fillInput(page, 'input[name="houseNo"]', houseNo);
+) => {  
+  await fillInput(page, 'input[name="houseNo"]', houseNo ? houseNo : ".");
   ["ENCUMBRANCE_TYPE.FNOS", "ENCUMBRANCE_TYPE.FNMS"].includes(encumbranceType)
     ? await fillInput(page, 'input[name="flatNo"]', flatNo)
     : logger.info("Skipping flatNo input as it's empty");
