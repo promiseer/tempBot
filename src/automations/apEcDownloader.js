@@ -170,6 +170,7 @@ const handleMultipleSro = async (
         "ENCUMBRANCE_TYPE.SHNMS",
         "ENCUMBRANCE_TYPE.SSNMS",
         "ENCUMBRANCE_TYPE.SASNMS",
+        "ENCUMBRANCE_TYPE.ASNMS",
       ].includes(encumbranceType)
     ) {
       sroPair.unshift(sroName);
@@ -353,6 +354,7 @@ const ScrapeByNone = async (
         "ENCUMBRANCE_TYPE.SHNMS",
         "ENCUMBRANCE_TYPE.SSNMS",
         "ENCUMBRANCE_TYPE.SASNMS",
+        "ENCUMBRANCE_TYPE.ASNMS",
       ].includes(encumbranceType)
         ? multipleSros
         : sroName
@@ -376,6 +378,7 @@ const ScrapeByNone = async (
         "ENCUMBRANCE_TYPE.SHNOS",
         "ENCUMBRANCE_TYPE.SHNMS",
         "ENCUMBRANCE_TYPE.SNOS",
+        "ENCUMBRANCE_TYPE.SSNOS",
         "ENCUMBRANCE_TYPE.SSNMS",
       ].includes(encumbranceType)
     ) {
@@ -396,9 +399,12 @@ const ScrapeByNone = async (
     }
 
     if (
-      ["ENCUMBRANCE_TYPE.SASNMS", "ENCUMBRANCE_TYPE.ASNOS"].includes(
-        encumbranceType
-      )
+      [
+        "ENCUMBRANCE_TYPE.ASNMS",
+        "ENCUMBRANCE_TYPE.SASNMS",
+        "ENCUMBRANCE_TYPE.ASNOS",
+        "ENCUMBRANCE_TYPE.SASNOS",
+      ].includes(encumbranceType)
     ) {
       await fillSurveyDetails(
         page,
@@ -454,7 +460,7 @@ const fillBuildingDetails = async (
   startDate,
   aliasName,
   encumbranceType
-) => {  
+) => {
   await fillInput(page, 'input[name="houseNo"]', houseNo ? houseNo : ".");
   ["ENCUMBRANCE_TYPE.FNOS", "ENCUMBRANCE_TYPE.FNMS"].includes(encumbranceType)
     ? await fillInput(page, 'input[name="flatNo"]', flatNo)
@@ -585,7 +591,9 @@ const apEcDownloader = async ({
       case "ENCUMBRANCE_TYPE.PNOS":
       case "ENCUMBRANCE_TYPE.SHNOS":
       case "ENCUMBRANCE_TYPE.SNOS":
+      case "ENCUMBRANCE_TYPE.SSNOS":
       case "ENCUMBRANCE_TYPE.ASNOS":
+      case "ENCUMBRANCE_TYPE.SASNOS":
         filePath = await ScrapeByNone(
           encumbranceType,
           page,
@@ -615,6 +623,7 @@ const apEcDownloader = async ({
       case "ENCUMBRANCE_TYPE.SASNMS":
       case "ENCUMBRANCE_TYPE.FNMS":
       case "ENCUMBRANCE_TYPE.PNMS":
+      case "ENCUMBRANCE_TYPE.ASNMS":
         filePath = await handleMultipleSro(
           encumbranceType,
           page,
