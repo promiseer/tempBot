@@ -34,12 +34,19 @@ try {
 // Export the environment variables so they can be used in the app
 module.exports = {
   PORT: process.env.PORT,
-  username: process.env.TEL_EC_USERNAME,
-  password: process.env.TEL_EC_PASSWORD,
+  tgUsername: process.env.TEL_EC_USERNAME,
+  tgPassword: process.env.TEL_EC_PASSWORD,
+  kaUsername: process.env.KA_EC_USERNAME,
+  kaPassword: process.env.KA_EC_PASSWORD,
   backendUrl: process.env.BACKEND_URL,
   adminEmail: process.env.ADMIN_EMAIL,
   adminPassword: process.env.ADMIN_PASSWORD,
   googleApiKey: JSON.parse(process.env.GOOGLE_API_KEY),
   bucketName: process.env.CLOUD_BUCKET_NAME,
   redisUrl: process.env.REDIS_URL,
+  imapUserName: process.env.IMAP_USERNAME,
+  imapPassword: process.env.IMAP_PASSWORD,
+  imapHost: "imap.gmail.com",
+  imapPort: 993,
+  searchFrom: "dsrnotify@karnataka.gov.in",
 };

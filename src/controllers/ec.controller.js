@@ -23,22 +23,19 @@ const generateEcJobs = async (req, res) => {
       encumbranceTypes,
       startDate,
       identifier,
-      propertyType
+      propertyType,
+      botRun
     } = req.body;
 
     const requiredParams = {
       state,
       caseId,
-      docNo,
-      docYear,
-      houseNo,
       district,
       village,
       sroName,
-      multipleSros,
       encumbranceTypes,
       identifier,
-      propertyType
+      propertyType,
     };
     const missingParams = Object.keys(requiredParams).filter(
       (param) =>

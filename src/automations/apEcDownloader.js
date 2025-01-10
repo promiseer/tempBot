@@ -1,4 +1,5 @@
 const logger = require("../../utils/logger");
+const moment = require("moment");
 const {
   clickButton,
   fillInput,
@@ -137,7 +138,10 @@ const handleMultipleSro = async (
   houseNo,
   ward,
   block,
-  district
+  district,
+  aliasName,
+  flatNo,
+  plotNo
 ) => {
   const tasks = [];
 
@@ -153,18 +157,23 @@ const handleMultipleSro = async (
           sroName,
           sroPair, // Pass individual SRO from the pair
           startDate,
-          `${docNo}-${i}` // Unique identifier for each task
+          `${encumbranceType}-${i}` // Unique identifier for each task
         )
       );
     }
     if (
       [
         "ENCUMBRANCE_TYPE.HNMS",
+        "ENCUMBRANCE_TYPE.PNMS",
+        "ENCUMBRANCE_TYPE.FNMS",
+        "ENCUMBRANCE_TYPE.SNMS",
         "ENCUMBRANCE_TYPE.SHNMS",
         "ENCUMBRANCE_TYPE.SSNMS",
         "ENCUMBRANCE_TYPE.SASNMS",
+        "ENCUMBRANCE_TYPE.ASNMS",
       ].includes(encumbranceType)
     ) {
+      sroPair.unshift(sroName);
       tasks.push(
         await ScrapeByNone(
           encumbranceType,
@@ -179,13 +188,19 @@ const handleMultipleSro = async (
           sroPair,
           ownerName,
           startDate,
-          `${docNo}-${i}` // Unique identifier for each task
+          aliasName,
+          `${encumbranceType}-${i}`, // Unique identifier for each task
+          flatNo,
+          plotNo
         )
       );
     }
   }
   const filePaths = await Promise.all(tasks);
-  const filePath = await mergePDFs(filePaths, `public/Downloads/${docNo}.pdf`);
+  const filePath = await mergePDFs(
+    filePaths,
+    `public/Downloads/${encumbranceType}.pdf`
+  );
   return filePath;
 };
 
@@ -250,7 +265,7 @@ const handleSecondForm = async (
       "https://registration.ec.ap.gov.in/ecSearchAPI/v1/public/getLinkDocumentsByPropertyDetails"
     );
 
-    if (!Object.entries(docs.data.documentList).length) {
+    if (!docs || !Object.entries(docs?.data?.documentList).length) {
       return false;
     }
     await clickButton(page, "#selectAllId");
@@ -299,7 +314,10 @@ const ScrapeByNone = async (
   multipleSros,
   ownerName,
   startDate,
-  docNoIdentifier
+  aliasName,
+  docNoIdentifier,
+  flatNo,
+  plotNo
 ) => {
   let filePath;
   try {
@@ -332,9 +350,11 @@ const ScrapeByNone = async (
       "#react-select-3-input",
       [
         "ENCUMBRANCE_TYPE.HNMS",
+        "ENCUMBRANCE_TYPE.SNMS",
         "ENCUMBRANCE_TYPE.SHNMS",
         "ENCUMBRANCE_TYPE.SSNMS",
         "ENCUMBRANCE_TYPE.SASNMS",
+        "ENCUMBRANCE_TYPE.ASNMS",
       ].includes(encumbranceType)
         ? multipleSros
         : sroName
@@ -350,9 +370,15 @@ const ScrapeByNone = async (
       [
         "ENCUMBRANCE_TYPE.HNOS",
         "ENCUMBRANCE_TYPE.HNMS",
+        "ENCUMBRANCE_TYPE.PNOS",
+        "ENCUMBRANCE_TYPE.PNMS",
+        "ENCUMBRANCE_TYPE.FNOS",
+        "ENCUMBRANCE_TYPE.FNMS",
+        "ENCUMBRANCE_TYPE.SNMS",
         "ENCUMBRANCE_TYPE.SHNOS",
         "ENCUMBRANCE_TYPE.SHNMS",
         "ENCUMBRANCE_TYPE.SNOS",
+        "ENCUMBRANCE_TYPE.SSNOS",
         "ENCUMBRANCE_TYPE.SSNMS",
       ].includes(encumbranceType)
     ) {
@@ -361,25 +387,33 @@ const ScrapeByNone = async (
         sroName,
         surveyNo,
         houseNo,
+        flatNo,
+        plotNo,
         ward,
         block,
         village,
         startDate,
+        aliasName,
         encumbranceType
-      ); //@todo: add alias if required
+      );
     }
 
     if (
-      ["ENCUMBRANCE_TYPE.SASNMS", "ENCUMBRANCE_TYPE.ASNOS"].includes(
-        encumbranceType
-      )
+      [
+        "ENCUMBRANCE_TYPE.ASNMS",
+        "ENCUMBRANCE_TYPE.SASNMS",
+        "ENCUMBRANCE_TYPE.ASNOS",
+        "ENCUMBRANCE_TYPE.SASNOS",
+      ].includes(encumbranceType)
     ) {
       await fillSurveyDetails(
         page,
+        plotNo,
         surveyNo,
         village,
-        encumbranceType,
-        startDate
+        aliasName,
+        startDate,
+        encumbranceType
       );
     }
 
@@ -391,7 +425,7 @@ const ScrapeByNone = async (
       "https://registration.ec.ap.gov.in/ecSearchAPI/v1/public/getLinkDocumentsByPropertyDetails"
     );
 
-    if (!Object.entries(docs.data.documentList).length) {
+    if (!docs || !Object.entries(docs?.data?.documentList).length) {
       logger.error("Documents not found on search data.");
       return dummyFilePath;
     }
@@ -418,13 +452,23 @@ const fillBuildingDetails = async (
   sroName,
   surveyNo,
   houseNo,
+  flatNo,
+  plotNo,
   ward,
   block,
   village,
   startDate,
+  aliasName,
   encumbranceType
 ) => {
-  await fillInput(page, 'input[name="houseNo"]', houseNo);
+  await fillInput(page, 'input[name="houseNo"]', houseNo ? houseNo : ".");
+  ["ENCUMBRANCE_TYPE.FNOS", "ENCUMBRANCE_TYPE.FNMS"].includes(encumbranceType)
+    ? await fillInput(page, 'input[name="flatNo"]', flatNo)
+    : logger.info("Skipping flatNo input as it's empty");
+
+  ["ENCUMBRANCE_TYPE.PNOS", "ENCUMBRANCE_TYPE.PNMS"].includes(encumbranceType)
+    ? await fillInput(page, 'input[name="plotOrBiNo"]', plotNo)
+    : logger.info("Skipping plotNo input as it's empty");
 
   await fillInput(page, 'input[name="inSurveyNo"]', surveyNo);
 
@@ -435,29 +479,42 @@ const fillBuildingDetails = async (
     ? await fillInput(page, 'input[name="blockNo"]', block)
     : logger.info("Skipping block no input as it's empty");
   await fillInput(page, 'input[name="villageOrCity"]', village);
-  sroName
-    ? await fillInput(page, 'input[name="alias"]', sroName)
+  aliasName
+    ? await fillInput(page, 'input[name="alias"]', aliasName)
     : logger.info("Skipping Alias input as it's empty");
 
   startDate
-    ? await page.type('input[name="periodOfSearchFrom"]', startDate)
+    ? await page.type(
+        'input[name="periodOfSearchFrom"]',
+        moment(startDate, "DD/MM/YYYY").format("DD-MM-YYYY")
+      )
     : logger.info("Skipping Date input as it's empty");
 };
 
 // Fill the survey details form for Sites or Agricultural Lands
 const fillSurveyDetails = async (
   page,
+  plotNo,
   survey,
   village,
-  encumbranceType,
+  aliasName,
   startDate
 ) => {
   await clickButton(page, '.form-check-input[value="BS"]');
   await clickButton(page, '.form-check-input[value="SAL"]');
+  plotNo
+    ? await fillInput(page, 'input[name="plotOrBiNo"]', plotNo)
+    : logger.info("Skipping plotNo input as it's empty");
+
   await fillInput(page, 'input[name="inSurveyNo"]', survey);
   await fillInput(page, 'input[name="revenueVillage"]', village);
+  await fillInput(page, 'input[name="revenueAlias"]', aliasName); //aliasName
+
   startDate
-    ? await page.type('input[name="periodOfSearchFrom"]', startDate)
+    ? await page.type(
+        'input[name="periodOfSearchFrom"]',
+        moment(startDate, "DD/MM/YYYY").format("DD-MM-YYYY")
+      )
     : logger.info("Skipping Date input as it's empty");
 };
 
@@ -488,6 +545,9 @@ const apEcDownloader = async ({
   district,
   encumbranceType,
   startDate,
+  aliasName,
+  plotNo,
+  flatNo,
 }) => {
   const browser = await puppeteerInstance();
   const page = await browser.newPage();
@@ -505,7 +565,7 @@ const apEcDownloader = async ({
           sroName,
           multipleSros,
           startDate,
-          docNo //docIdentifier
+          encumbranceType //docIdentifier
         );
         await page.close();
 
@@ -527,9 +587,13 @@ const apEcDownloader = async ({
 
         break;
       case "ENCUMBRANCE_TYPE.HNOS":
+      case "ENCUMBRANCE_TYPE.FNOS":
+      case "ENCUMBRANCE_TYPE.PNOS":
       case "ENCUMBRANCE_TYPE.SHNOS":
       case "ENCUMBRANCE_TYPE.SNOS":
+      case "ENCUMBRANCE_TYPE.SSNOS":
       case "ENCUMBRANCE_TYPE.ASNOS":
+      case "ENCUMBRANCE_TYPE.SASNOS":
         filePath = await ScrapeByNone(
           encumbranceType,
           page,
@@ -543,16 +607,23 @@ const apEcDownloader = async ({
           multipleSros,
           ownerName,
           startDate,
-          docNo //docIdentifier
+          aliasName,
+          encumbranceType, //docIdentifier,
+          flatNo,
+          plotNo
         );
         await page.close();
 
         break;
 
       case "ENCUMBRANCE_TYPE.HNMS":
+      case "ENCUMBRANCE_TYPE.SNMS":
       case "ENCUMBRANCE_TYPE.SHNMS":
       case "ENCUMBRANCE_TYPE.SSNMS":
       case "ENCUMBRANCE_TYPE.SASNMS":
+      case "ENCUMBRANCE_TYPE.FNMS":
+      case "ENCUMBRANCE_TYPE.PNMS":
+      case "ENCUMBRANCE_TYPE.ASNMS":
         filePath = await handleMultipleSro(
           encumbranceType,
           page,
@@ -567,7 +638,10 @@ const apEcDownloader = async ({
           houseNo,
           ward,
           block,
-          district
+          district,
+          aliasName,
+          flatNo,
+          plotNo
         );
         sros = multipleSros.join(", ");
         await page.close();
@@ -582,7 +656,7 @@ const apEcDownloader = async ({
     await browser.close();
     return { status: "ok", filePath, sros };
   } catch (error) {
-    logger.info(error.message);
+    logger.error(error.message);
 
     throw new Error(error.message);
   } finally {

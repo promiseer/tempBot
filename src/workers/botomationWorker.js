@@ -5,6 +5,7 @@ const logger = require("../../utils/logger");
 const apEcDownloader = require("../automations/apEcDownloader");
 const tgEcDownloader = require("../automations/tgEcDownloader");
 const tnEcDowloader = require("../automations/tnEcDownloader");
+const kaEcDownloader = require("../automations/kaEcDownloader");
 const { createAttachement } = require("../services/nirnai.service");
 const cluster = require("cluster");
 const totalCPUs = require("os").cpus().length;
@@ -52,6 +53,19 @@ const processJob = async (job) => {
           }
         } catch (error) {
           logger.error(`Error processing TELANGANA: ${error.message}`);
+        }
+        break;
+      case "KARNATAKA":
+        try {
+          const { filePath } = await kaEcDownloader(data);
+          if (filePath) {
+            const file = await uploadFileGC(fileDestination, filePath);
+            await createAttachement(caseId, file, sros, encumbranceType, data);
+            await deleteFile(filePath);
+            logger.info(`Successfully processed TG-EC with Job ID:${id}`);
+          }
+        } catch (error) {
+          logger.error(`Error processing TAMILNADU: ${error.message}`);
         }
         break;
 

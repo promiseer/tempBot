@@ -79,18 +79,13 @@ const selectOption = async (page, selector, value) => {
 const getSelectedOption = async (page, selector, value) => {
   await page.waitForSelector(selector + " option");
 
-  return await page.$$eval(
-    selector + " option",
-    (options, value) => {
-      console.log(options);
-
-      const matchedOption = options.find(
-        (option) => option.textContent === value
-      );
-      return matchedOption ? matchedOption.value : null;
-    },
-    value
-  );
+  const options = await page.$$eval(selector + " option", (options) => {
+    return options.map((option) => ({
+      [option.textContent.trim()]: option.value,
+    }));
+  });
+  const matchedOption = options.find((option) => option[value]);
+  return matchedOption ? matchedOption[value] : null;
 };
 
 const clickButton = async (page, selector, maxAttempts = 3, sleep = 1000) => {
@@ -129,17 +124,21 @@ const clickButton = async (page, selector, maxAttempts = 3, sleep = 1000) => {
 };
 
 const responseValidator = async (page, url) => {
-  const response = await page.waitForResponse(
-    (response) => response.url() === url && response.status() === 200
-  );
-  const contentType = response.headers()["content-type"];
+  try {
+    const response = await page.waitForResponse(
+      (response) => response.url() === url && response.status() === 200
+    );
+    const contentType = response.headers()["content-type"];
 
-  // Check if the response is JSON
-  if (contentType && contentType.includes("application/json")) {
-    return await response.json(); // Parse and return JSON response
-  } else {
-    return await response.text(); // Return plain text or other format
-  } // Return the response body (assuming it's JSON)
+    // Check if the response is JSON
+    if (contentType && contentType.includes("application/json")) {
+      return await response.json(); // Parse and return JSON response
+    } else {
+      return await response.text(); // Return plain text or other format
+    } // Return the response body (assuming it's JSON)
+  } catch (error) {
+    logger.error(error.message);
+  }
 };
 
 const getCaptchaText = async (
@@ -245,7 +244,7 @@ const elementFinder = async (page, selector, delay = 1000) => {
   await page.waitForSelector(selector, { timeout: delay }).catch(() => null);
 };
 
-const generatePDF = async (page, tableSelector, filePath) => {
+const generatePDF = async (page, tableSelector, filePath, KA = false) => {
   try {
     const htmlTemplate = `
 <!DOCTYPE html>
@@ -256,7 +255,8 @@ const generatePDF = async (page, tableSelector, filePath) => {
   <title>Extracted Table PDF</title>
   <style>
       table {
-          border-collapse: collapse !important;;
+          border-collapse: collapse !important;
+          width: 100%; /* Adjust the percentage as needed */
       }
 
       td, th {
@@ -267,9 +267,33 @@ const generatePDF = async (page, tableSelector, filePath) => {
           word-wrap: break-word; /* Allow text to wrap inside the cells */
           white-space: normal; /* Ensure content wraps inside cells */
           overflow-wrap: break-word; /* Break words that are too long */
+          max-width: 200px; /* Adjust the width as needed */
       }
       thead {
           display: table-header-group; /* Repeat header on each page */
+      }
+      th:nth-child(1), td:nth-child(1) {
+          width: 1%;
+      }
+
+      th:nth-child(2), td:nth-child(2) {
+          width: 31%;
+      }
+
+      th:nth-child(3), td:nth-child(3) {
+          width: 20%;
+      }
+
+      th:nth-child(4), td:nth-child(4) {
+          width: 10%;
+      }
+
+      th:nth-child(5), td:nth-child(5) {
+          width: 28%;
+      }
+
+      th:nth-child(6), td:nth-child(6) {
+          width: 7%;
       }
 
       .centered-table {
@@ -305,19 +329,83 @@ const generatePDF = async (page, tableSelector, filePath) => {
         }
       }
     };
-
     const tableHTML = await getTableHTML();
-    const finalHTML = htmlTemplate.replace(
+
+    let finalHTML = htmlTemplate.replace(
       "<!-- Table will be appended here -->",
       tableHTML
     );
     await page.setContent(finalHTML); // Set the HTML content to the page
+    fs.writeFileSync("index.html", finalHTML);
+    if (KA) {
+      const tableHTML = await generateFormattedTable(page, "table tr");
+
+      finalHTML = htmlTemplate.replace(
+        "<!-- Table will be appended here -->",
+        tableHTML
+      );
+      await page.setContent(finalHTML); // Set the HTML content to the page
+    }
+    fs.writeFileSync("ap.html", finalHTML);
+
     await downloadPdf(page, filePath);
     return `${filePath}.pdf`;
   } catch (error) {
     logger.error(`Error:`, error);
     throw error;
   }
+};
+const generateFormattedTable = async (page, selector) => {
+  // Evaluate the page to extract and format the data
+  const tableData = await page.evaluate((selector) => {
+    const tableHTML = `
+    <table class="tableData generatedTable table table-bordered" style="width: 100%">
+      <thead>
+        <tr style="text-align: center">
+          <th style="width: 5%">Sl No.</th>
+          <th style="width: 31%">Description of property</th>
+          <th style="width: 10%">Reg.Date<br />Exe.Date<br />Pres.Date</th>
+          <th style="width: 10%">Nature &amp;<br />Mkt.Value<br />Con. Value</th>
+          <th style="width: 28%">Name of Parties<br />Executant(EX) &amp;<br />Claimants(CL)</th>
+          <th style="width: 16%">Vol/Pg No<br />CD No Doct No/<br />Year [ScheduleNo]</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- Tbody will be appended here -->
+      </tbody>
+    </table>
+  `;
+    // Select rows, skipping the first three rows (header and some initial rows)
+    const rows = Array.from(document.querySelectorAll(selector)).slice(3);
+
+    // Map the rows into formatted <tr> elements
+    const formattedTBody = rows.map((row) => {
+      const columns = row.querySelectorAll("td");
+
+      return `<tr>
+        <td class="centered-table"> ${columns[0]?.innerText?.trim()}</td>
+        <td class="centered-table"> ${columns[1]?.innerText?.trim()}</td>
+        <td class="centered-table"> ${columns[2]?.innerText?.trim()}</td>
+        <td class="centered-table"> ${columns[3]?.innerText?.trim()}</td>
+        <td class="centered-table"> ${columns[4]?.innerText?.trim()} <br/> <br/>${columns[5]?.innerText?.trim()}</td>
+        <td class="centered-table"> ${columns[6]?.innerText?.trim()} <br/> <br/>
+           ${columns[7]?.innerText?.trim()} <br/> <br/>
+           ${columns[8]?.innerText?.trim()} 
+        </td>
+      </tr>`;
+    });
+
+    // Replace the placeholder with the formatted tbody rows
+    const finalTable = tableHTML.replace(
+      "<!-- Tbody will be appended here -->",
+      formattedTBody.join("")
+    );
+
+    // Return the full table HTML as a string
+    return finalTable;
+  }, selector);
+
+  return tableData;
 };
 
 // Merge PDFs
