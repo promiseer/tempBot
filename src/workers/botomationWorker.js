@@ -71,10 +71,10 @@ const processJob = async (job) => {
 
       case "TAMIL NADU":
         try {
-          const { filePath, sros } = await tnEcDowloader(data);
+          const filePath = await tnEcDowloader(data);
           if (filePath) {
             const file = await uploadFileGC(fileDestination, filePath);
-            await createAttachement(caseId, file, sros, encumbranceType, data);
+            await createAttachement(caseId, file, data.sroName, encumbranceType, data);
             await deleteFile(filePath);
             logger.info(`Successfully processed TN-EC with Job ID:${id}`);
           }

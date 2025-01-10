@@ -25,7 +25,7 @@ const puppeteerInstance = async (options = {}) => {
 const initializeBrowser = async (options) => {
   return await puppeteer.launch({
     headless: true,
-    timeout: 30000, // Adjust timeout as needed
+    timeout: 60000, // Adjust timeout as needed
     saveSessionData: true, // Set to true to save session data
     caches: true, // Disable caching
     defaultViewport: null,
@@ -180,9 +180,11 @@ const getCaptchaTextFromImage = async (
   maxRetries = 10,
   retryInterval = 1000
 ) => {
-  try {
+  try {    
+    await new Promise((r) => setTimeout(r, 1000));
+    
     // Wait for the CAPTCHA element
-    await page.waitForSelector(selector);
+    await page.waitForSelector(selector, { visible: true });
 
     for (let attempt = 0; attempt < maxRetries; attempt++) {
       // Capture the image from the DOM

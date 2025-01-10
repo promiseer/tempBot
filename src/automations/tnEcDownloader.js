@@ -2,7 +2,7 @@ const fs = require("fs");
 const path = require("path");
 const axios = require("axios");
 const logger = require("../../utils/logger");
-const { puppeteerInstance, clickButton } = require("../../utils/pupeteer");
+const { puppeteerInstance, clickButton, getCaptchaTextFromImage } = require("../../utils/pupeteer");
 
 /**
  * Ensures a directory exists; if it doesn't, it creates one recursively.
@@ -92,7 +92,6 @@ async function selectDropdownOption(page, selector, text) {
  * @throws Will throw an error if the CAPTCHA could not be solved or any step fails.
  */
 async function handleCaptcha(page) {
-  // You need to implement or require your `getCaptchaTextFromImage` function accordingly
   let captchaData;
   try {
     // e.g. getCaptchaTextFromImage(page, "#captcha", maxRetries, delayBetweenRetries)
@@ -347,7 +346,7 @@ async function tnEcDownloader({ docNo, docYear, sroName }) {
   } finally {
     await browser.close();
   }
-
+  
   return filePath;
 }
 
