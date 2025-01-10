@@ -232,7 +232,7 @@ const generatePDF = async (page, tableSelector, filePath, KA = false) => {
       }
 
       th:nth-child(3), td:nth-child(3) {
-          width: 20%;
+          width: 8%;
       }
 
       th:nth-child(4), td:nth-child(4) {
@@ -287,7 +287,6 @@ const generatePDF = async (page, tableSelector, filePath, KA = false) => {
       tableHTML
     );
     await page.setContent(finalHTML); // Set the HTML content to the page
-    fs.writeFileSync("index.html", finalHTML);
     if (KA) {
       const tableHTML = await generateFormattedTable(page, "table tr");
 
@@ -297,7 +296,6 @@ const generatePDF = async (page, tableSelector, filePath, KA = false) => {
       );
       await page.setContent(finalHTML); // Set the HTML content to the page
     }
-    fs.writeFileSync("ap.html", finalHTML);
 
     await downloadPdf(page, filePath);
     return `${filePath}.pdf`;
@@ -306,26 +304,28 @@ const generatePDF = async (page, tableSelector, filePath, KA = false) => {
     throw error;
   }
 };
-const generateFormattedTable = async (page, selector) => {
+
+const generateFormattedTable = async (page, selector, retry = 3) => {
   // Evaluate the page to extract and format the data
   const tableData = await page.evaluate((selector) => {
     const tableHTML = `
-    <table class="tableData generatedTable table table-bordered" style="width: 100%">
-      <thead>
-        <tr style="text-align: center">
-          <th style="width: 5%">Sl No.</th>
-          <th style="width: 31%">Description of property</th>
-          <th style="width: 10%">Reg.Date<br />Exe.Date<br />Pres.Date</th>
-          <th style="width: 10%">Nature &amp;<br />Mkt.Value<br />Con. Value</th>
-          <th style="width: 28%">Name of Parties<br />Executant(EX) &amp;<br />Claimants(CL)</th>
-          <th style="width: 16%">Vol/Pg No<br />CD No Doct No/<br />Year [ScheduleNo]</th>
-        </tr>
-      </thead>
-      <tbody>
-        <!-- Tbody will be appended here -->
-      </tbody>
-    </table>
-  `;
+      <table class="tableData generatedTable table table-bordered" style="width: 100%">
+        <thead>
+          <tr style="text-align: center">
+            <th style="width: 1%">Sl No.</th>
+            <th style="width: 31%">Description of property</th>
+            <th style="width: 9%">Reg.Date<br />Exe.Date<br />Pres.Date</th>
+            <th style="width: 10%">Nature &amp;<br />Mkt.Value<br />Con. Value</th>
+            <th style="width: 28%">Name of Parties<br />Executant(EX) &amp;<br />Claimants(CL)</th>
+            <th style="width: 7%">Vol/Pg No<br />CD No Doct No/<br />Year [ScheduleNo]</th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- Tbody will be appended here -->
+        </tbody>
+      </table>
+    `;
+
     // Select rows, skipping the first three rows (header and some initial rows)
     const rows = Array.from(document.querySelectorAll(selector)).slice(3);
 

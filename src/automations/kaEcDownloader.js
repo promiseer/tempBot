@@ -8,8 +8,9 @@ const {
 } = require("../../utils/pupeteer");
 
 const fetchOtpFromEmail = require("../../utils/fetchOtp");
+const logger = require("../../utils/logger");
 // Login function
-async function login(page) {
+const login = async (page) => {
   await clickButton(page, "#headerMain > ul > span > li:nth-child(2) > button");
   await delay(1000);
   await fillInput(page, "#userName", process.env.KA_EC_USERNAME);
@@ -25,10 +26,10 @@ async function login(page) {
   });
 
   if (imageUrl) {
-    console.log(`Captcha Image URL: ${imageUrl}`);
+    logger.info(`Captcha Image URL: ${imageUrl}`);
     captcha = imageUrl.match(/\/([^\/]+)\.png$/)[1];
   } else {
-    console.log("Captcha image not found!");
+    logger.info("Captcha image not found!");
   }
 
   await fillInput(page, "#loginCaptchaUserInput1", captcha);
@@ -39,14 +40,27 @@ async function login(page) {
     "body > div:nth-child(1) > app-root > div > div > app-header-new > main > div.popup-container.open > div > div.card-body.ng-star-inserted > div > div.col-md-7 > form > div.row > button"
   );
   // await delay(5000);
-}
+};
+
+const getAndFillOtp = async (page) => {
+  const otp = await fetchOtpFromEmail();
+  await delay(2000); // Delay after fetching OTP
+
+  await page.waitForSelector("#otp");
+
+  await page.type("#otp", otp);
+
+  logger.info("Filled OTP:", otp);
+};
+
 const handleDialog = async (page) => {
   new Promise((resolve) => {
     page.on("dialog", async (dialog) => {
-      console.log("Dialog message: " + dialog.message());
-      console.log("Popup detected, re-logging in...");
+      logger.info("Dialog message: " + dialog.message());
+      logger.info("Popup detected, re-logging in...");
 
       await dialog.accept(); // Accept the dialog
+      await delay(1000);
       await login(page); // Re-login after accepting the dialog
 
       resolve(); // Resolve the promise once the dialog handling is complete
@@ -63,41 +77,71 @@ async function kaEc() {
 
   // Start the login process
   await login(page);
+  logger.info("Login completed.");
   await handleDialog(page);
-
-  // Handle dialog alerts
-  // page.on("dialog", async (dialog) => {
-  //   console.log("Dialog message: " + dialog.message());
-  //   console.log("Popup detected, re-logging in...");
-  //   await dialog.accept();
-  //   await login(page);
-  // });
-
-  // Wait for the login process to complete
   await delay(2000);
-  const otp = await fetchOtpFromEmail();
+  await getAndFillOtp(page);
   await delay(2000);
-
-  await fillInput(page, "#otp", otp);
-  await delay(1000);
 
   await clickButton(
     page,
     "body > div:nth-child(1) > app-root > div > div > app-header-new > main > div.popup-container.open > div > div.card-body.ng-star-inserted > div > div:nth-child(2) > form > div.row > div.col-md-8 > button"
   );
-  await delay(1000);
+  await delay(3000);
 
-  // await elementFinder(page, "");
+  const invalidOtpElement = await page.$(
+    "body > div:nth-child(1) > app-root > div > div > app-header-new > main > div.popup-container.open > div > div.card-body.ng-star-inserted > div > div:nth-child(2) > form > div:nth-child(2) > span"
+  );
+  if (invalidOtpElement) {
+    const invalidOtpText = await page.evaluate(
+      (el) => el.innerText,
+      invalidOtpElement
+    );
+    if (invalidOtpText.includes("Unable to Validate OTP / Incorrect OTP")) {
+      logger.info("Invalid OTP detected, retrying...");
+      await page.focus("#otp");
+
+      // Clear the OTP input field
+      await page.evaluate(() => {
+        document.querySelector("#otp").value = ""; // Clear OTP field by directly setting its value
+      });
+      // await getAndFillOtp(page);
+      const otp = await fetchOtpFromEmail();
+      await delay(2000); // Delay after fetching OTP
+      await page.waitForSelector("#otp");
+
+      // Focus the OTP input field to ensure it's ready for typing
+      await page.focus("#otp");
+
+      await page.$eval(
+        "#otp",
+        (input, otp) => {
+          input.value = otp; // Set the OTP value
+          input.dispatchEvent(new Event("input", { bubbles: true })); // Trigger the input event
+          input.dispatchEvent(new Event("change", { bubbles: true })); // Trigger the change event
+        },
+        otp
+      );
+
+      await delay(2000);
+      await clickButton(
+        page,
+        "body > div:nth-child(1) > app-root > div > div > app-header-new > main > div.popup-container.open > div > div.card-body.ng-star-inserted > div > div:nth-child(2) > form > div.row > div.col-md-8 > button"
+      );
+    } else {
+      logger.info("Invalid OTP element not found, skipping.");
+    }
+  }
 
   await clickButton(
     page,
-    "body > div:nth-child(1) > app-root > div > div > app-kaveri-dashboard > div > div.animated.fadeIn.mt-3.ng-tns-c142-2 > div > div.row.p-2.ng-tns-c142-2 > div.col-md-4.d-flex.align-items-center.justify-content-center.ng-tns-c142-2 > div > button"
+    "body > div:nth-child(1) > app-root > div > div > app-kaveri-dashboard > div > div.animated.fadeIn.mt-3.ng-tns-c140-2 > div > div.row.p-2.ng-tns-c140-2 > div.col-md-4.d-flex.align-items-center.justify-content-center.ng-tns-c140-2 > div > button"
   );
   await delay(1000);
 
   await clickButton(
     page,
-    "body > div:nth-child(1) > app-root > div > div > app-kaveri-dashboard > div > div.applicationTypeOverlay.ng-tns-c142-2.ng-star-inserted > div > app-application-type > div > div > div.card-body > div.row.mt-4 > div:nth-child(2) > img"
+    "body > div:nth-child(1) > app-root > div > div > app-kaveri-dashboard > div > div.applicationTypeOverlay.ng-tns-c140-2.ng-star-inserted > div > app-application-type > div > div > div.card-body > div.row.mt-4 > div:nth-child(2) > img"
   );
 
   await delay(1000);
@@ -113,14 +157,13 @@ async function kaEc() {
     "#mat-dialog-0 > app-perquisite > div.overlay.ng-star-inserted > div > div > div.card-body > div:nth-child(2) > button.btn.btn-primary"
   );
 
-  // await page.waitForSelector('select[name="district"]');
-
-  console.log("selecting District");
+  logger.info("selecting District");
   await selectOption(page, 'select[name="district"]', "Basavanagudi");
   await delay(1000);
-
+  logger.info("selecting taluka");
   await selectOption(page, 'select[name="taluka"]', "Kengeri");
   await delay(1000);
+  logger.info("selecting taluka");
 
   await selectOption(page, 'select[name="hobli"]', "Uttara Halli Hobli 4");
   await delay(1000);
@@ -164,7 +207,7 @@ async function kaEc() {
     `public/Downloads/${"docNoIdentifier"}`,
     true
   );
-  
+
   return filePath;
 }
 
