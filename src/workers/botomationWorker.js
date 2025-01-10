@@ -69,14 +69,14 @@ const processJob = async (job) => {
         }
         break;
 
-      case "TAMILNADU":
+      case "TAMIL NADU":
         try {
           const { filePath, sros } = await tnEcDowloader(data);
           if (filePath) {
             const file = await uploadFileGC(fileDestination, filePath);
             await createAttachement(caseId, file, sros, encumbranceType, data);
             await deleteFile(filePath);
-            logger.info(`Successfully processed TG-EC with Job ID:${id}`);
+            logger.info(`Successfully processed TN-EC with Job ID:${id}`);
           }
         } catch (error) {
           logger.error(`Error processing TAMILNADU: ${error.message}`);
