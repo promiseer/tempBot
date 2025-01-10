@@ -4,6 +4,7 @@ const { uploadFileGC } = require("../../utils/googleBucketUtils");
 const logger = require("../../utils/logger");
 const apEcDownloader = require("../automations/apEcDownloader");
 const tgEcDownloader = require("../automations/tgEcDownloader");
+const tnEcDowloader = require("../automations/tnEcDownloader");
 const kaEcDownloader = require("../automations/kaEcDownloader");
 const { createAttachement } = require("../services/nirnai.service");
 const cluster = require("cluster");
@@ -68,11 +69,15 @@ const processJob = async (job) => {
         }
         break;
 
-      case "TAMILNADU":
+      case "TAMIL NADU":
         try {
-          // @TODO: few checks pending
-          // await tamilNaduEcDownloader();
-          logger.info(`Successfully processed TG-EC with Job ID:${id}`);
+          const filePath = await tnEcDowloader(data);
+          if (filePath) {
+            const file = await uploadFileGC(fileDestination, filePath);
+            await createAttachement(caseId, file, data.sroName, encumbranceType, data);
+            await deleteFile(filePath);
+            logger.info(`Successfully processed TN-EC with Job ID:${id}`);
+          }
         } catch (error) {
           logger.error(`Error processing TAMILNADU: ${error.message}`);
         }
