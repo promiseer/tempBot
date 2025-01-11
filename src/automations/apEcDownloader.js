@@ -144,6 +144,7 @@ const handleMultipleSro = async (
   plotNo
 ) => {
   const tasks = [];
+  multipleSros = multipleSros.map((s) => s.replace(/\s+/g, ""));
 
   for (let i = 0; i < multipleSros?.length; i += 2) {
     const sroPair = multipleSros.slice(i, i + 2);
@@ -507,6 +508,7 @@ const fillSurveyDetails = async (
     : logger.info("Skipping plotNo input as it's empty");
 
   await fillInput(page, 'input[name="inSurveyNo"]', survey);
+  await delay(1000);
   await fillInput(page, 'input[name="revenueVillage"]', village);
   await fillInput(page, 'input[name="revenueAlias"]', aliasName); //aliasName
 
