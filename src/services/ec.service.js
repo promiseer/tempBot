@@ -39,7 +39,7 @@ const encumbranceMapping = {
       "ENCUMBRANCE_TYPE.SASNMS",
       "ENCUMBRANCE_TYPE.SASNOS",
     ],
-    splitter: "/",
+    splitter: "-/",
   },
 };
 
