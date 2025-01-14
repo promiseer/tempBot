@@ -37,18 +37,9 @@ const handleNavigationError = async (fn, ...args) => {
   }
 };
 
-// Search by Document Number
-const searchByDocumentNumber = async (
-  encumbranceType,
-  page,
-  docNo,
-  docYear,
-  sroName,
-  multipleSros,
-  startDate,
-  docNoIdentifier
-) => {
+const handleLogin = async (page, docNo, docYear, sroName) => {
   try {
+    // Navigate to the page
     await page.goto("https://registration.ec.ap.gov.in/ecSearch", {
       waitUntil: "networkidle0",
     });
@@ -87,37 +78,77 @@ const searchByDocumentNumber = async (
 
     // Submit form
     await clickButton(page, '#encumbranceServiceForm button[type="submit"]');
-    logger.info("Logged in successfully");
 
-    // Continue to next steps
-    // if (encumbranceType == "ENCUMBRANCE_TYPE.DNMS") {
-    //   return await handleMultipleSro(
-    //     page,
-    //     encumbranceType,
-    //     multipleSros,
-    //     startDate
-    //   );
-    // }
+    logger.info("Form submitted successfully!");
+  } catch (error) {
+    logger.error("Error during the process:", error);
+  }
+};
 
-    const found = await handleSecondForm(
+// Search by Document Number
+const searchByDocumentNumber = async (
+  encumbranceType,
+  page,
+  docNo,
+  docYear,
+  sroName,
+  multipleSros,
+  startDate,
+  docNoIdentifier
+) => {
+  try {
+    await handleLogin(page, docNo, docYear, sroName);
+
+    // Validate response and get property list
+    const propertyData = await responseValidator(
       page,
-      encumbranceType,
-      multipleSros,
-      startDate
+      "https://registration.ec.ap.gov.in/ecSearchAPI/v1/public/getPropertiesByDocNumAndSroCodeAndRegYear"
     );
-    if (!found) {
-      logger.error("Documents not found on search data.");
-      return dummyFilePath;
+
+    // Click NEXT button after first form submission
+    const tasks = [];
+
+    if (propertyData?.data?.propertyList?.length > 1) {
+      for (let i = 0; i < propertyData.data.propertyList.length; i++) {
+        const elementNo = i + 1;
+        if (
+          propertyData.data.propertyList[i].wardno &&
+          propertyData.data.propertyList[i].blockno &&
+          propertyData.data.propertyList[i].sy1 &&
+          propertyData.data.propertyList[i].hno !== ",,"
+        ) {
+          tasks.push(
+            await handleMultipleProperty(
+              page,
+              docNo,
+              docYear,
+              sroName,
+              encumbranceType,
+              multipleSros,
+              startDate,
+              `${docNoIdentifier}-${propertyData.data.propertyList[i].wardno}-${elementNo}`,
+              elementNo
+            )
+          );
+        }
+      }
+
+      Promise.all(tasks);
+
+      const filePath = await mergePDFs(
+        tasks,
+        `public/Downloads/${encumbranceType}.pdf`
+      );
+      return filePath;
+    } else {
+      return await handleSecondForm(
+        page,
+        encumbranceType,
+        multipleSros,
+        startDate,
+        docNoIdentifier
+      );
     }
-    await page.waitForNavigation();
-
-    const filePath = await generatePDF(
-      page,
-      "#__next > div > div:nth-child(2) > div > div.container > div:nth-child(2) > div > table",
-      `public/Downloads/${docNoIdentifier}`
-    );
-
-    return filePath;
   } catch (error) {
     logger.error("Error in searchByDocumentNumber:", error.message);
     throw error;
@@ -210,20 +241,19 @@ const handleSecondForm = async (
   page,
   encumbranceType,
   multipleSros,
-  startDate
+  startDate,
+  docNoIdentifier,
+  elementNo = 1
 ) => {
   try {
-    // Validate response and get property list
-    await responseValidator(
-      page,
-      "https://registration.ec.ap.gov.in/ecSearchAPI/v1/public/getPropertiesByDocNumAndSroCodeAndRegYear"
-    );
-
     const sroList =
       encumbranceType === "ENCUMBRANCE_TYPE.DNMS" ? multipleSros : [];
 
     // Click NEXT button after first form submission
-    await clickButton(page, "button.btn.btn-primary.btn-sm");
+    await clickButton(
+      page,
+      `#__next > div > div:nth-child(3) > div.MainContent > div > div > div > div.my-4.col-md-12 > table > tbody > tr:nth-child(${elementNo}) > td:nth-child(13) > button`
+    );
     logger.info("2nd Form submitted successfully!");
 
     await page.waitForSelector("form");
@@ -267,16 +297,51 @@ const handleSecondForm = async (
     );
 
     if (!docs || !Object.entries(docs?.data?.documentList).length) {
-      return false;
+      logger.error("Documents not found on search data.");
+      return dummyFilePath;
     }
     await clickButton(page, "#selectAllId");
     await clickButton(page, ".btn.btn-primary");
-    return true;
+
+    await page.waitForNavigation();
+    const filePath = await generatePDF(
+      page,
+      "#__next > div > div:nth-child(2) > div > div.container > div:nth-child(2) > div > table",
+      `public/Downloads/${docNoIdentifier}`
+    );
+
+    return filePath;
   } catch (error) {
     throw error;
   }
 };
 
+const handleMultipleProperty = async (
+  page,
+  docNo,
+  docYear,
+  sroName,
+  encumbranceType,
+  multipleSros,
+  startDate,
+  docNoIdentifier,
+  elementNo
+) => {
+  await handleLogin(page, docNo, docYear, sroName);
+  await responseValidator(
+    page,
+    "https://registration.ec.ap.gov.in/ecSearchAPI/v1/public/getPropertiesByDocNumAndSroCodeAndRegYear"
+  );
+
+  return await handleSecondForm(
+    page,
+    encumbranceType,
+    multipleSros,
+    startDate,
+    docNoIdentifier,
+    elementNo
+  );
+};
 // Select the SRO values
 const selectSRO = async (page, sroList) => {
   await page.click("div.react-select__control"); // Focus on the dropdown
@@ -567,9 +632,10 @@ const apEcDownloader = async ({
           sroName,
           multipleSros,
           startDate,
-          encumbranceType //docIdentifier
+          encumbranceType, //docIdentifier
+          browser
         );
-        await page.close();
+        // await page.close();
 
         break;
 
@@ -655,14 +721,14 @@ const apEcDownloader = async ({
         break;
     }
 
-    await browser.close();
+    // await browser.close();
     return { status: "ok", filePath, sros };
   } catch (error) {
     logger.error(error.message);
 
     throw new Error(error.message);
   } finally {
-    await browser.close();
+    // await browser.close();
   }
 };
 
