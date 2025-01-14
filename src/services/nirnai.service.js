@@ -43,7 +43,8 @@ const createAttachement = async (
   file,
   sros,
   encumbranceType,
-  caseData
+  caseData,
+  docType = "DOCUMENT_TYPE.ENCUMBRANCE_S"
 ) => {
   if (!caseId || !file) {
     logger.error("requested parameters not found");
@@ -65,7 +66,7 @@ const createAttachement = async (
           {
             id: null,
             docCategory: null,
-            docType: "DOCUMENT_TYPE.ENCUMBRANCE_S",
+            docType: docType,
             docNumber: "ECS" + file,
             docDate: null,
             docLink: file,
