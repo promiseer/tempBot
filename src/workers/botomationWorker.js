@@ -6,7 +6,10 @@ const apEcDownloader = require("../automations/apEcDownloader");
 const tgEcDownloader = require("../automations/tgEcDownloader");
 const tnEcDowloader = require("../automations/tnEcDownloader");
 const kaEcDownloader = require("../automations/kaEcDownloader");
-const { createAttachement } = require("../services/nirnai.service");
+const {
+  createAttachement,
+  convertTamilEC,
+} = require("../services/nirnai.service");
 const cluster = require("cluster");
 const totalCPUs = require("os").cpus().length;
 const processJob = async (job) => {
@@ -74,12 +77,28 @@ const processJob = async (job) => {
           const filePath = await tnEcDowloader(data);
           if (filePath) {
             const file = await uploadFileGC(fileDestination, filePath);
-            await createAttachement(caseId, file, data.sroName, encumbranceType, data);
+            logger.info(`Saving Internal Document`);
+            await createAttachement(
+              caseId,
+              file,
+              data.sroName,
+              "DOCUMENT_TYPE.INTERNAL_DOCUMENTS",
+              data
+            );
             await deleteFile(filePath);
+            logger.info(`Converting tamil ec`);
+            const convertedPath = await convertTamilEC(file, fileDestination);
+            await createAttachement(
+              caseId,
+              convertedPath,
+              data.sroName,
+              encumbranceType,
+              data
+            );
             logger.info(`Successfully processed TN-EC with Job ID:${id}`);
           }
         } catch (error) {
-          logger.error(`Error processing TAMILNADU: ${error.message}`);
+          logger.error(`Error processing TAMIL NADU: ${error.message}`);
         }
         break;
 
