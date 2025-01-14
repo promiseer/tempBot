@@ -4,6 +4,8 @@ const moment = require("moment");
 
 const {
   backendUrl,
+  ecUrl,
+  ecSecret,
   adminEmail,
   adminPassword,
 } = require("../../config/config");
@@ -41,7 +43,8 @@ const createAttachement = async (
   file,
   sros,
   encumbranceType,
-  caseData
+  caseData,
+  docType = "DOCUMENT_TYPE.ENCUMBRANCE_S"
 ) => {
   if (!caseId || !file) {
     logger.error("requested parameters not found");
@@ -54,7 +57,7 @@ const createAttachement = async (
       encumbranceType,
       sros,
       caseData
-    );    
+    );
     const response = await axios.post(
       `${backendUrl}/request/create/attachments`,
       {
@@ -63,7 +66,7 @@ const createAttachement = async (
           {
             id: null,
             docCategory: null,
-            docType: "DOCUMENT_TYPE.ENCUMBRANCE_S",
+            docType: docType,
             docNumber: "ECS" + file,
             docDate: null,
             docLink: file,
@@ -75,7 +78,7 @@ const createAttachement = async (
             encumbranceType,
             params,
             notUsedParams,
-            botRun:caseData.botRun+1,
+            botRun: caseData.botRun + 1,
             identifier: caseData.identifier,
             propertyType: caseData.propertyType,
           },
@@ -151,4 +154,48 @@ const getParams = (
   }
   return { params, notUsedParams };
 };
-module.exports = { getToken, createAttachement };
+
+const convertTamilEC = async (sourceLocation, destinationPath) => {
+  if (!sourceLocation || !destinationPath) {
+    logger.error("Source or destination location not provided");
+    throw new Error("Source or destination location not provided");
+  }
+
+  if (!ecUrl || !ecSecret) {
+    logger.error("EC URL or secret key not set in environment variables");
+    throw new Error("EC URL or secret key not set in environment variables");
+  }
+
+  try {
+    const fileKey = Date.now().toString();
+    const response = await axios.post(
+      `${ecUrl}/convert_tamil_ec`,
+      {
+        source_key: destinationPath + "/" + sourceLocation,
+        destination_key: destinationPath + "/" + fileKey,
+      },
+      {
+        headers: {
+          "x-token": ecSecret,
+          accept: "application/json",
+          "Content-Type": "application/json",
+        },
+      }
+    );
+
+    if (response.status !== 200) {
+      logger.error(
+        `Failed to convert Tamil EC: ${response.status} ${response.data}`
+      );
+      throw new Error(`Failed to convert Tamil EC: ${response.data}`);
+    }
+
+    logger.info("Successfully converted Tamil EC");
+    return response.data;
+  } catch (error) {
+    logger.error(`Error during Tamil EC conversion: ${error}`);
+    throw error;
+  }
+};
+
+module.exports = { getToken, createAttachement, convertTamilEC };

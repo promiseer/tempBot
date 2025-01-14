@@ -180,9 +180,8 @@ const getCaptchaTextFromImage = async (
   maxRetries = 10,
   retryInterval = 1000
 ) => {
-  try {    
+  try {
     await new Promise((r) => setTimeout(r, 1000));
-    
     // Wait for the CAPTCHA element
     await page.waitForSelector(selector, { visible: true });
 
@@ -193,7 +192,9 @@ const getCaptchaTextFromImage = async (
         throw new Error("CAPTCHA element not found");
       }
 
-      const imagePath = `./captcha_${Date.now()}.png`;
+      const dirPath = pathModule.resolve(__dirname, "../public/Downloads");
+
+      const imagePath = pathModule.join(dirPath, `captcha_${Date.now()}.png`);
       await element.screenshot({ path: imagePath });
 
       // Read the image file and convert to base64
