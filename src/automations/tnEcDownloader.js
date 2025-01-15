@@ -2,7 +2,11 @@ const fs = require("fs");
 const path = require("path");
 const axios = require("axios");
 const logger = require("../../utils/logger");
-const { puppeteerInstance, clickButton, getCaptchaTextFromImage } = require("../../utils/pupeteer");
+const {
+  puppeteerInstance,
+  clickButton,
+  getCaptchaTextFromImage,
+} = require("../../utils/pupeteer");
 
 /**
  * Ensures a directory exists; if it doesn't, it creates one recursively.
@@ -23,7 +27,7 @@ function ensureDirectoryExists(dirPath) {
  */
 async function savePdfToFile(pdfUrl, fileName) {
   try {
-    const dirPath = path.resolve(__dirname, "../../Public/Downloads");
+    const dirPath = path.resolve(__dirname, "../../public/Downloads");
     ensureDirectoryExists(dirPath);
 
     const filePath = path.join(dirPath, `${fileName}.pdf`);
@@ -316,7 +320,7 @@ async function tnEcDownloader({ docNo, docYear, sroName }) {
     // Go to Tamil Nadu registration portal
     logger.info("Navigating to Tamil Nadu registration portal...");
     await page.goto("https://tnreginet.gov.in/portal/", {
-      waitUntil: "networkidle0",
+      waitUntil: "load",
     });
 
     // Check if #fontSelection contains "English"
@@ -329,7 +333,7 @@ async function tnEcDownloader({ docNo, docYear, sroName }) {
         "The 'fontSelection' element contains 'English'; clicking it..."
       );
       await clickButton(page, "#fontSelection");
-      await page.waitForNavigation({ waitUntil: "networkidle0" });
+      await page.waitForNavigation({ waitUntil: "load" });
 
       // Proceed to Search/View EC flow
       filePath = await clickSearchViewEC(page, sroName, docNo, docYear);
@@ -346,7 +350,7 @@ async function tnEcDownloader({ docNo, docYear, sroName }) {
   } finally {
     await browser.close();
   }
-  
+
   return filePath;
 }
 

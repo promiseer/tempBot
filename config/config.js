@@ -39,6 +39,8 @@ module.exports = {
   kaUsername: process.env.KA_EC_USERNAME,
   kaPassword: process.env.KA_EC_PASSWORD,
   backendUrl: process.env.BACKEND_URL,
+  ecUrl: process.env.EC_URL,
+  ecSecret: process.env.EC_SECRET,
   adminEmail: process.env.ADMIN_EMAIL,
   adminPassword: process.env.ADMIN_PASSWORD,
   googleApiKey: JSON.parse(process.env.GOOGLE_API_KEY),
