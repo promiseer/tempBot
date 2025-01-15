@@ -82,9 +82,10 @@ const processJob = async (job) => {
               caseId,
               file,
               data.sroName,
-              "DOCUMENT_TYPE.INTERNAL_DOCUMENTS",
+              encumbranceType,
               data,
-              "DOCUMENT_CATEGORY.INTERNAL_DOCUMENTS"
+              "DOCUMENT_CATEGORY.INTERNAL_DOCUMENTS",
+              "DOCUMENT_TYPE.INTERNAL_DOCUMENTS"
             );
             await deleteFile(filePath);
             logger.info(`Converting tamil ec`);

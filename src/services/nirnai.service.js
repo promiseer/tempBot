@@ -44,6 +44,7 @@ const createAttachement = async (
   sros,
   encumbranceType,
   caseData,
+  docCategory = null,
   docType = "DOCUMENT_TYPE.ENCUMBRANCE_S"
 ) => {
   if (!caseId || !file) {
@@ -65,7 +66,7 @@ const createAttachement = async (
         attachments: [
           {
             id: null,
-            docCategory: null,
+            docCategory,
             docType: docType,
             docNumber: "ECS" + file,
             docDate: null,
@@ -191,7 +192,7 @@ const convertTamilEC = async (sourceLocation, destinationPath) => {
     }
 
     logger.info("Successfully converted Tamil EC");
-    return response.data;
+    return fileKey;
   } catch (error) {
     logger.error(`Error during Tamil EC conversion: ${error}`);
     throw error;
