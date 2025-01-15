@@ -635,7 +635,7 @@ const apEcDownloader = async ({
           encumbranceType, //docIdentifier
           browser
         );
-        // await page.close();
+        await page.close();
 
         break;
 
@@ -721,14 +721,14 @@ const apEcDownloader = async ({
         break;
     }
 
-    // await browser.close();
+    await browser.close();
     return { status: "ok", filePath, sros };
   } catch (error) {
     logger.error(error.message);
 
     throw new Error(error.message);
   } finally {
-    // await browser.close();
+    await browser.close();
   }
 };
 
