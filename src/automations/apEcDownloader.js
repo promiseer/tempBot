@@ -111,11 +111,11 @@ const searchByDocumentNumber = async (
     if (propertyData?.data?.propertyList?.length > 1) {
       for (let i = 0; i < propertyData.data.propertyList.length; i++) {
         const elementNo = i + 1;
+        // house no condition if needed :- propertyData.data.propertyList[i].hno !== ",,"
         if (
           propertyData.data.propertyList[i].wardno &&
           propertyData.data.propertyList[i].blockno &&
-          propertyData.data.propertyList[i].sy1 &&
-          propertyData.data.propertyList[i].hno !== ",,"
+          propertyData.data.propertyList[i].sy1
         ) {
           tasks.push(
             await handleMultipleProperty(
