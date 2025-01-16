@@ -1,9 +1,12 @@
 const puppeteer = require("puppeteer");
+const Captcha = require("2captcha");
 const fs = require("fs");
 const pathModule = require("path");
 const logger = require("./logger");
 const { PDFDocument } = require("pdf-lib");
 const { deleteFile } = require("./deleteFile");
+
+const solver = new Captcha.Solver(process.env.CAPTCHA_KEY);
 
 const puppeteerInstance = async (options = {}) => {
   try {
@@ -22,7 +25,7 @@ const puppeteerInstance = async (options = {}) => {
 const initializeBrowser = async (options) => {
   return await puppeteer.launch({
     headless: true,
-    timeout: 30000, // Adjust timeout as needed
+    timeout: 60000, // Adjust timeout as needed
     saveSessionData: true, // Set to true to save session data
     caches: true, // Disable caching
     defaultViewport: null,
@@ -76,18 +79,13 @@ const selectOption = async (page, selector, value) => {
 const getSelectedOption = async (page, selector, value) => {
   await page.waitForSelector(selector + " option");
 
-  return await page.$$eval(
-    selector + " option",
-    (options, value) => {
-      console.log(options);
-
-      const matchedOption = options.find(
-        (option) => option.textContent === value
-      );
-      return matchedOption ? matchedOption.value : null;
-    },
-    value
-  );
+  const options = await page.$$eval(selector + " option", (options) => {
+    return options.map((option) => ({
+      [option.textContent.trim()]: option.value,
+    }));
+  });
+  const matchedOption = options.find((option) => option[value]);
+  return matchedOption ? matchedOption[value] : null;
 };
 
 const clickButton = async (page, selector, maxAttempts = 3, sleep = 1000) => {
@@ -176,6 +174,55 @@ const waitForSelector = async (page, selector, timeout = 10000) => {
   }
 };
 
+const getCaptchaTextFromImage = async (
+  page,
+  selector,
+  maxRetries = 10,
+  retryInterval = 1000
+) => {
+  try {
+    await new Promise((r) => setTimeout(r, 1000));
+    // Wait for the CAPTCHA element
+    await page.waitForSelector(selector, { visible: true });
+
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+      // Capture the image from the DOM
+      const element = await page.$(selector);
+      if (!element) {
+        throw new Error("CAPTCHA element not found");
+      }
+
+      const dirPath = pathModule.resolve(__dirname, "../public/Downloads");
+
+      const imagePath = pathModule.join(dirPath, `captcha_${Date.now()}.png`);
+      await element.screenshot({ path: imagePath });
+
+      // Read the image file and convert to base64
+      const imageBase64 = fs.readFileSync(imagePath, "base64");
+
+      // Send the image to 2Captcha for solving
+      try {
+        const result = await solver.imageCaptcha(imageBase64);
+        if (result?.data) {
+          const captchaText = result.data.toUpperCase();
+          console.log("CAPTCHA Text:", captchaText);
+          return { captchaText, imagePath };
+        }
+      } catch (err) {
+        console.error("Error solving CAPTCHA:", err.message);
+      }
+
+      console.log(`Retrying... attempts left: ${maxRetries - attempt - 1}`);
+      await new Promise((resolve) => setTimeout(resolve, retryInterval)); // Wait before retrying
+    }
+
+    throw new Error("Failed to retrieve CAPTCHA text after multiple attempts");
+  } catch (error) {
+    console.error("Error in getCaptchaTextFromImage:", error.message);
+    throw error;
+  }
+};
+
 const downloadPdf = async (page, path) => {
   const pdfBuffer = await page.pdf({
     format: "Legal", // Adjust the format as needed
@@ -200,7 +247,7 @@ const elementFinder = async (page, selector, delay = 1000) => {
   await page.waitForSelector(selector, { timeout: delay }).catch(() => null);
 };
 
-const generatePDF = async (page, tableSelector, filePath) => {
+const generatePDF = async (page, tableSelector, filePath, KA = false) => {
   try {
     const htmlTemplate = `
 <!DOCTYPE html>
@@ -211,7 +258,8 @@ const generatePDF = async (page, tableSelector, filePath) => {
   <title>Extracted Table PDF</title>
   <style>
       table {
-          border-collapse: collapse !important;;
+          border-collapse: collapse !important;
+          width: 100%; /* Adjust the percentage as needed */
       }
 
       td, th {
@@ -222,9 +270,33 @@ const generatePDF = async (page, tableSelector, filePath) => {
           word-wrap: break-word; /* Allow text to wrap inside the cells */
           white-space: normal; /* Ensure content wraps inside cells */
           overflow-wrap: break-word; /* Break words that are too long */
+          max-width: 200px; /* Adjust the width as needed */
       }
       thead {
           display: table-header-group; /* Repeat header on each page */
+      }
+      th:nth-child(1), td:nth-child(1) {
+          width: 1%;
+      }
+
+      th:nth-child(2), td:nth-child(2) {
+          width: 31%;
+      }
+
+      th:nth-child(3), td:nth-child(3) {
+          width: 8%;
+      }
+
+      th:nth-child(4), td:nth-child(4) {
+          width: 10%;
+      }
+
+      th:nth-child(5), td:nth-child(5) {
+          width: 28%;
+      }
+
+      th:nth-child(6), td:nth-child(6) {
+          width: 7%;
       }
 
       .centered-table {
@@ -260,19 +332,83 @@ const generatePDF = async (page, tableSelector, filePath) => {
         }
       }
     };
-
     const tableHTML = await getTableHTML();
-    const finalHTML = htmlTemplate.replace(
+
+    let finalHTML = htmlTemplate.replace(
       "<!-- Table will be appended here -->",
       tableHTML
     );
     await page.setContent(finalHTML); // Set the HTML content to the page
+    if (KA) {
+      const tableHTML = await generateFormattedTable(page, "table tr");
+
+      finalHTML = htmlTemplate.replace(
+        "<!-- Table will be appended here -->",
+        tableHTML
+      );
+      await page.setContent(finalHTML); // Set the HTML content to the page
+    }
+
     await downloadPdf(page, filePath);
     return `${filePath}.pdf`;
   } catch (error) {
     logger.error(`Error:`, error);
     throw error;
   }
+};
+
+const generateFormattedTable = async (page, selector, retry = 3) => {
+  // Evaluate the page to extract and format the data
+  const tableData = await page.evaluate((selector) => {
+    const tableHTML = `
+      <table class="tableData generatedTable table table-bordered" style="width: 100%">
+        <thead>
+          <tr style="text-align: center">
+            <th style="width: 1%">Sl No.</th>
+            <th style="width: 31%">Description of property</th>
+            <th style="width: 9%">Reg.Date<br />Exe.Date<br />Pres.Date</th>
+            <th style="width: 10%">Nature &amp;<br />Mkt.Value<br />Con. Value</th>
+            <th style="width: 28%">Name of Parties<br />Executant(EX) &amp;<br />Claimants(CL)</th>
+            <th style="width: 7%">Vol/Pg No<br />CD No Doct No/<br />Year [ScheduleNo]</th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- Tbody will be appended here -->
+        </tbody>
+      </table>
+    `;
+
+    // Select rows, skipping the first three rows (header and some initial rows)
+    const rows = Array.from(document.querySelectorAll(selector)).slice(3);
+
+    // Map the rows into formatted <tr> elements
+    const formattedTBody = rows.map((row) => {
+      const columns = row.querySelectorAll("td");
+
+      return `<tr>
+        <td class="centered-table"> ${columns[0]?.innerText?.trim()}</td>
+        <td class="centered-table"> ${columns[1]?.innerText?.trim()}</td>
+        <td class="centered-table"> ${columns[2]?.innerText?.trim()}</td>
+        <td class="centered-table"> ${columns[3]?.innerText?.trim()}</td>
+        <td class="centered-table"> ${columns[4]?.innerText?.trim()} <br/> <br/>${columns[5]?.innerText?.trim()}</td>
+        <td class="centered-table"> ${columns[6]?.innerText?.trim()} <br/> <br/>
+           ${columns[7]?.innerText?.trim()} <br/> <br/>
+           ${columns[8]?.innerText?.trim()} 
+        </td>
+      </tr>`;
+    });
+
+    // Replace the placeholder with the formatted tbody rows
+    const finalTable = tableHTML.replace(
+      "<!-- Tbody will be appended here -->",
+      formattedTBody.join("")
+    );
+
+    // Return the full table HTML as a string
+    return finalTable;
+  }, selector);
+
+  return tableData;
 };
 
 // Merge PDFs
@@ -347,6 +483,7 @@ module.exports = {
   responseValidator,
   waitForSelector,
   getCaptchaText,
+  getCaptchaTextFromImage,
   downloadPdf,
   delay,
   elementFinder,

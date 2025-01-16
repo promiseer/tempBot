@@ -326,7 +326,8 @@ const searchByProperty = async (
   docNoIdentifier,
   propertyType,
   plotNo,
-  flatNo
+  flatNo,
+  taluk
 ) => {
   page = await handleLogin(page, browser);
   await delay(1000);
@@ -335,13 +336,13 @@ const searchByProperty = async (
     "#command > div:nth-child(1) > div.col-md-2.col-sm-4"
   );
   await delay(1000);
-  await selectOption(page, "#dist_code", district); // Select 'dist_code'
+  await selectOption(page, 'select[name="dist_code"]', district); // Select 'dist_code'
   await delay(1000);
 
-  await selectOption(page, "#mandal_code", block); // Select 'mandal_code' NOTE:block id mandal here
+  await selectOption(page, 'select[name="mandal_code"]', taluk); // Select 'mandal_code' NOTE:block id mandal here
   await delay(1000);
 
-  await selectOption(page, "#village_code", village); // Select 'village_code'
+  await selectOption(page, 'select[name="village_code"]', village); // Select 'village_code'
   await delay(2000);
 
   if (
@@ -402,6 +403,8 @@ const fillBuildingDetails = async (
   block,
   flatNo
 ) => {
+  console.log("block,",block);
+  
   //building structures
   await fillInput(page, "#house_no", houseNo); //House No
 
@@ -461,6 +464,7 @@ const tgEcDownloader = async ({
   propertyType,
   plotNo,
   flatNo,
+  taluk,
 }) => {
   const browser = await puppeteerInstance();
   let page = await browser.newPage();
@@ -479,7 +483,7 @@ const tgEcDownloader = async ({
           sroName,
           multipleSros,
           startDate,
-          encumbranceType, //docIdentifier,
+          encumbranceType //docIdentifier,
         );
         await page.close();
         break;
@@ -505,7 +509,8 @@ const tgEcDownloader = async ({
           encumbranceType,
           propertyType,
           plotNo,
-          flatNo
+          flatNo,
+          taluk
         );
         await page.close();
         break;

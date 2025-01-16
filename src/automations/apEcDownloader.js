@@ -37,18 +37,9 @@ const handleNavigationError = async (fn, ...args) => {
   }
 };
 
-// Search by Document Number
-const searchByDocumentNumber = async (
-  encumbranceType,
-  page,
-  docNo,
-  docYear,
-  sroName,
-  multipleSros,
-  startDate,
-  docNoIdentifier
-) => {
+const handleLogin = async (page, docNo, docYear, sroName) => {
   try {
+    // Navigate to the page
     await page.goto("https://registration.ec.ap.gov.in/ecSearch", {
       waitUntil: "networkidle0",
     });
@@ -87,37 +78,76 @@ const searchByDocumentNumber = async (
 
     // Submit form
     await clickButton(page, '#encumbranceServiceForm button[type="submit"]');
-    logger.info("Logged in successfully");
 
-    // Continue to next steps
-    // if (encumbranceType == "ENCUMBRANCE_TYPE.DNMS") {
-    //   return await handleMultipleSro(
-    //     page,
-    //     encumbranceType,
-    //     multipleSros,
-    //     startDate
-    //   );
-    // }
+    logger.info("Form submitted successfully!");
+  } catch (error) {
+    logger.error("Error during the process:", error);
+  }
+};
 
-    const found = await handleSecondForm(
+// Search by Document Number
+const searchByDocumentNumber = async (
+  encumbranceType,
+  page,
+  docNo,
+  docYear,
+  sroName,
+  multipleSros,
+  startDate,
+  docNoIdentifier
+) => {
+  try {
+    await handleLogin(page, docNo, docYear, sroName);
+
+    // Validate response and get property list
+    const propertyData = await responseValidator(
       page,
-      encumbranceType,
-      multipleSros,
-      startDate
+      "https://registration.ec.ap.gov.in/ecSearchAPI/v1/public/getPropertiesByDocNumAndSroCodeAndRegYear"
     );
-    if (!found) {
-      logger.error("Documents not found on search data.");
-      return dummyFilePath;
+
+    // Click NEXT button after first form submission
+    const tasks = [];
+
+    if (propertyData?.data?.propertyList?.length > 1) {
+      for (let i = 0; i < propertyData.data.propertyList.length; i++) {
+        const elementNo = i + 1;
+        // propertyData.data.propertyList[i].hno !== ",,"
+        // propertyData.data.propertyList[i].wardno &&
+        // propertyData.data.propertyList[i].blockno
+
+        if (propertyData.data.propertyList[i].sy1) {
+          tasks.push(
+            await handleMultipleProperty(
+              page,
+              docNo,
+              docYear,
+              sroName,
+              encumbranceType,
+              multipleSros,
+              startDate,
+              `${docNoIdentifier}-${propertyData.data.propertyList[i].wardno}-${elementNo}`,
+              elementNo
+            )
+          );
+        }
+      }
+
+      Promise.all(tasks);
+
+      const filePath = await mergePDFs(
+        tasks,
+        `public/Downloads/${encumbranceType}.pdf`
+      );
+      return filePath;
+    } else {
+      return await handleSecondForm(
+        page,
+        encumbranceType,
+        multipleSros,
+        startDate,
+        docNoIdentifier
+      );
     }
-    await page.waitForNavigation();
-
-    const filePath = await generatePDF(
-      page,
-      "#__next > div > div:nth-child(2) > div > div.container > div:nth-child(2) > div > table",
-      `public/Downloads/${docNoIdentifier}`
-    );
-
-    return filePath;
   } catch (error) {
     logger.error("Error in searchByDocumentNumber:", error.message);
     throw error;
@@ -144,6 +174,7 @@ const handleMultipleSro = async (
   plotNo
 ) => {
   const tasks = [];
+  multipleSros = multipleSros.map((s) => s.replace(/\s+/g, ""));
 
   for (let i = 0; i < multipleSros?.length; i += 2) {
     const sroPair = multipleSros.slice(i, i + 2);
@@ -170,6 +201,7 @@ const handleMultipleSro = async (
         "ENCUMBRANCE_TYPE.SHNMS",
         "ENCUMBRANCE_TYPE.SSNMS",
         "ENCUMBRANCE_TYPE.SASNMS",
+        "ENCUMBRANCE_TYPE.ASNMS",
       ].includes(encumbranceType)
     ) {
       sroPair.unshift(sroName);
@@ -208,20 +240,19 @@ const handleSecondForm = async (
   page,
   encumbranceType,
   multipleSros,
-  startDate
+  startDate,
+  docNoIdentifier,
+  elementNo = 1
 ) => {
   try {
-    // Validate response and get property list
-    await responseValidator(
-      page,
-      "https://registration.ec.ap.gov.in/ecSearchAPI/v1/public/getPropertiesByDocNumAndSroCodeAndRegYear"
-    );
-
     const sroList =
       encumbranceType === "ENCUMBRANCE_TYPE.DNMS" ? multipleSros : [];
 
     // Click NEXT button after first form submission
-    await clickButton(page, "button.btn.btn-primary.btn-sm");
+    await clickButton(
+      page,
+      `#__next > div > div:nth-child(3) > div.MainContent > div > div > div > div.my-4.col-md-12 > table > tbody > tr:nth-child(${elementNo}) > td:nth-child(13) > button`
+    );
     logger.info("2nd Form submitted successfully!");
 
     await page.waitForSelector("form");
@@ -265,16 +296,51 @@ const handleSecondForm = async (
     );
 
     if (!docs || !Object.entries(docs?.data?.documentList).length) {
-      return false;
+      logger.error("Documents not found on search data.");
+      return dummyFilePath;
     }
     await clickButton(page, "#selectAllId");
     await clickButton(page, ".btn.btn-primary");
-    return true;
+
+    await page.waitForNavigation();
+    const filePath = await generatePDF(
+      page,
+      "#__next > div > div:nth-child(2) > div > div.container > div:nth-child(2) > div > table",
+      `public/Downloads/${docNoIdentifier}`
+    );
+
+    return filePath;
   } catch (error) {
     throw error;
   }
 };
 
+const handleMultipleProperty = async (
+  page,
+  docNo,
+  docYear,
+  sroName,
+  encumbranceType,
+  multipleSros,
+  startDate,
+  docNoIdentifier,
+  elementNo
+) => {
+  await handleLogin(page, docNo, docYear, sroName);
+  await responseValidator(
+    page,
+    "https://registration.ec.ap.gov.in/ecSearchAPI/v1/public/getPropertiesByDocNumAndSroCodeAndRegYear"
+  );
+
+  return await handleSecondForm(
+    page,
+    encumbranceType,
+    multipleSros,
+    startDate,
+    docNoIdentifier,
+    elementNo
+  );
+};
 // Select the SRO values
 const selectSRO = async (page, sroList) => {
   await page.click("div.react-select__control"); // Focus on the dropdown
@@ -353,6 +419,7 @@ const ScrapeByNone = async (
         "ENCUMBRANCE_TYPE.SHNMS",
         "ENCUMBRANCE_TYPE.SSNMS",
         "ENCUMBRANCE_TYPE.SASNMS",
+        "ENCUMBRANCE_TYPE.ASNMS",
       ].includes(encumbranceType)
         ? multipleSros
         : sroName
@@ -376,6 +443,7 @@ const ScrapeByNone = async (
         "ENCUMBRANCE_TYPE.SHNOS",
         "ENCUMBRANCE_TYPE.SHNMS",
         "ENCUMBRANCE_TYPE.SNOS",
+        "ENCUMBRANCE_TYPE.SSNOS",
         "ENCUMBRANCE_TYPE.SSNMS",
       ].includes(encumbranceType)
     ) {
@@ -396,9 +464,12 @@ const ScrapeByNone = async (
     }
 
     if (
-      ["ENCUMBRANCE_TYPE.SASNMS", "ENCUMBRANCE_TYPE.ASNOS"].includes(
-        encumbranceType
-      )
+      [
+        "ENCUMBRANCE_TYPE.ASNMS",
+        "ENCUMBRANCE_TYPE.SASNMS",
+        "ENCUMBRANCE_TYPE.ASNOS",
+        "ENCUMBRANCE_TYPE.SASNOS",
+      ].includes(encumbranceType)
     ) {
       await fillSurveyDetails(
         page,
@@ -455,7 +526,7 @@ const fillBuildingDetails = async (
   aliasName,
   encumbranceType
 ) => {
-  await fillInput(page, 'input[name="houseNo"]', houseNo);
+  await fillInput(page, 'input[name="houseNo"]', houseNo ? houseNo : ".");
   ["ENCUMBRANCE_TYPE.FNOS", "ENCUMBRANCE_TYPE.FNMS"].includes(encumbranceType)
     ? await fillInput(page, 'input[name="flatNo"]', flatNo)
     : logger.info("Skipping flatNo input as it's empty");
@@ -478,7 +549,10 @@ const fillBuildingDetails = async (
     : logger.info("Skipping Alias input as it's empty");
 
   startDate
-    ? await page.type('input[name="periodOfSearchFrom"]', moment(startDate, "DD/MM/YYYY").format("DD-MM-YYYY"))
+    ? await page.type(
+        'input[name="periodOfSearchFrom"]',
+        moment(startDate, "DD/MM/YYYY").format("DD-MM-YYYY")
+      )
     : logger.info("Skipping Date input as it's empty");
 };
 
@@ -498,11 +572,15 @@ const fillSurveyDetails = async (
     : logger.info("Skipping plotNo input as it's empty");
 
   await fillInput(page, 'input[name="inSurveyNo"]', survey);
+  await delay(1000);
   await fillInput(page, 'input[name="revenueVillage"]', village);
   await fillInput(page, 'input[name="revenueAlias"]', aliasName); //aliasName
 
   startDate
-    ? await page.type('input[name="periodOfSearchFrom"]', moment(startDate, "DD/MM/YYYY").format("DD-MM-YYYY"))
+    ? await page.type(
+        'input[name="periodOfSearchFrom"]',
+        moment(startDate, "DD/MM/YYYY").format("DD-MM-YYYY")
+      )
     : logger.info("Skipping Date input as it's empty");
 };
 
@@ -553,7 +631,8 @@ const apEcDownloader = async ({
           sroName,
           multipleSros,
           startDate,
-          encumbranceType //docIdentifier
+          encumbranceType, //docIdentifier
+          browser
         );
         await page.close();
 
@@ -579,7 +658,9 @@ const apEcDownloader = async ({
       case "ENCUMBRANCE_TYPE.PNOS":
       case "ENCUMBRANCE_TYPE.SHNOS":
       case "ENCUMBRANCE_TYPE.SNOS":
+      case "ENCUMBRANCE_TYPE.SSNOS":
       case "ENCUMBRANCE_TYPE.ASNOS":
+      case "ENCUMBRANCE_TYPE.SASNOS":
         filePath = await ScrapeByNone(
           encumbranceType,
           page,
@@ -609,6 +690,7 @@ const apEcDownloader = async ({
       case "ENCUMBRANCE_TYPE.SASNMS":
       case "ENCUMBRANCE_TYPE.FNMS":
       case "ENCUMBRANCE_TYPE.PNMS":
+      case "ENCUMBRANCE_TYPE.ASNMS":
         filePath = await handleMultipleSro(
           encumbranceType,
           page,
