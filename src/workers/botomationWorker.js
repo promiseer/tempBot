@@ -85,7 +85,7 @@ const processJob = async (job) => {
               encumbranceType,
               data,
               "DOCUMENT_CATEGORY.INTERNAL_DOCUMENTS",
-              "DOCUMENT_TYPE.INTERNAL_DOCUMENTS"
+              "DOCUMENT_TYPE.ENCUMBRANCE_DOWNLOAD"
             );
             await deleteFile(filePath);
             logger.info(`Converting tamil ec`);

@@ -102,6 +102,36 @@ const createAttachement = async (
   }
 };
 
+const stitchEcsM = async (requestId) => {
+  if (!requestId) {
+    logger.error("Requested parameters not found");
+    throw new Error("Requested parameters not found");
+  }
+
+  try {
+    const token = await getToken();
+    const response = await axios.post(
+      `${backendUrl}/encumbrance/stitch-ecms`,
+      {
+        requestId,
+      },
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      }
+    );
+
+    if (response.status !== 201) {
+      logger.error(`Failed to stitch ECS: ${response.status} ${response.data}`);
+      throw new Error(`Failed to stitch ECS: ${response.data}`);
+    }
+
+    return true;
+  } catch (error) {
+    logger.error(`Error during stitch ECS: ${error}`);
+    throw error;
+  }
+};
+
 const getParams = (
   EcType,
   sros,
@@ -199,4 +229,4 @@ const convertTamilEC = async (sourceLocation, destinationPath) => {
   }
 };
 
-module.exports = { getToken, createAttachement, convertTamilEC };
+module.exports = { getToken, createAttachement, convertTamilEC, stitchEcsM };
