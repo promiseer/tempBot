@@ -125,7 +125,7 @@ const searchByDocumentNumber = async (
               encumbranceType,
               multipleSros,
               startDate,
-              `${docNoIdentifier}-${propertyData.data.propertyList[i].wardno}-${elementNo}`,
+              `${docNoIdentifier}-${elementNo}`,
               elementNo
             )
           );
@@ -136,7 +136,7 @@ const searchByDocumentNumber = async (
 
       const filePath = await mergePDFs(
         tasks,
-        `public/Downloads/${encumbranceType}.pdf`
+        `public/Downloads/${docNoIdentifier}.pdf`
       );
       return filePath;
     } else {
