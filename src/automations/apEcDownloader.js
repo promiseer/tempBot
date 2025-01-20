@@ -125,7 +125,7 @@ const searchByDocumentNumber = async (
               encumbranceType,
               multipleSros,
               startDate,
-              `${docNoIdentifier}-${propertyData.data.propertyList[i].wardno}-${elementNo}`,
+              `${docNoIdentifier}-${elementNo}`,
               elementNo
             )
           );
@@ -136,7 +136,7 @@ const searchByDocumentNumber = async (
 
       const filePath = await mergePDFs(
         tasks,
-        `public/Downloads/${encumbranceType}.pdf`
+        `public/Downloads/${docNoIdentifier}.pdf`
       );
       return filePath;
     } else {
@@ -299,6 +299,7 @@ const handleSecondForm = async (
       logger.error("Documents not found on search data.");
       return dummyFilePath;
     }
+    await delay(2000);
     await clickButton(page, "#selectAllId");
     await clickButton(page, ".btn.btn-primary");
 
@@ -494,7 +495,7 @@ const ScrapeByNone = async (
       logger.error("Documents not found on search data.");
       return dummyFilePath;
     }
-
+    await delay(2000);
     await clickButton(page, "#selectAllId");
     await clickButton(page, "button.btn.btn-primary");
     await page.waitForNavigation();

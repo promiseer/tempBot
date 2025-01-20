@@ -302,6 +302,16 @@ const searchByDocumentNumber = async (
   }
   await clickButton(page, "#bean > button");
   await delay(3000);
+    //search period
+    startDate
+    ? await fillInput(
+        page,
+        'input[name="sro_start_date"]',
+        moment(startDate, "DD-MM-YYYY").format("DD/MM/YYYY")
+      )
+    : logger.info("Skipping Date input as it's empty"); //start date
+    await delay(2000);
+
 
   await clickButton(
     page,
@@ -403,8 +413,6 @@ const fillBuildingDetails = async (
   block,
   flatNo
 ) => {
-  console.log("block,",block);
-  
   //building structures
   await fillInput(page, "#house_no", houseNo); //House No
 
