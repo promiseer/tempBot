@@ -108,6 +108,14 @@ const searchByDocumentNumber = async (
     // Click NEXT button after first form submission
     const tasks = [];
 
+    if (
+      !propertyData ||
+      !Object.entries(propertyData?.data?.propertyList).length
+    ) {
+      logger.error("Documents not found on search data.");
+      return dummyFilePath;
+    }
+
     if (propertyData?.data?.propertyList?.length > 1) {
       for (let i = 0; i < propertyData.data.propertyList.length; i++) {
         const elementNo = i + 1;
