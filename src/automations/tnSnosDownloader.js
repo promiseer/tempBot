@@ -83,7 +83,7 @@ async function clickAndSearchSnos(
     logger.info("Clicked the 'Search Document' button; waiting for results...");
 
     try {
-      // 7. Wait for either the "Click here" link or the error message about too many schedules
+      // 7. Wait for either the "Click here" link, the "No Documents registered" message, or the "Too many schedules" message
       await Promise.race([
         page.waitForSelector('a[target="_blank"] span[style*="color: red"]', {
           timeout: 60000,
@@ -92,12 +92,26 @@ async function clickAndSearchSnos(
           () =>
             document.body.innerText.includes(
               "Number of Schedules for provided search criteria is more than 200."
+            ) ||
+            document.body.innerText.includes(
+              "No Documents registered during the Search Period"
             ),
           { timeout: 60000 }
         ),
       ]);
 
-      // Check if the specific error message is present
+      // Check if the "No Documents registered during the Search Period" message is present
+      const isNoDocuments = await page.evaluate(() =>
+        document.body.innerText.includes(
+          "No Documents registered during the Search Period"
+        )
+      );
+
+      if (isNoDocuments) {
+        throw new Error("No Documents registered during the Search Period.");
+      }
+
+      // Check if the "Too many schedules" message is present
       const isTooManySchedules = await page.evaluate(() =>
         document.body.innerText.includes(
           "Number of Schedules for provided search criteria is more than 200."
@@ -114,9 +128,12 @@ async function clickAndSearchSnos(
     } catch (error) {
       if (
         error.message.includes("Too many schedules") ||
+        error.message.includes(
+          "No Documents registered during the Search Period"
+        ) ||
         error.message.includes("timeout")
       ) {
-        logger.error("Too many schedules or timeout occurred.");
+        logger.error(error.message);
       }
       throw error;
     }
