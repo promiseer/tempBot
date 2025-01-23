@@ -186,10 +186,19 @@ const getParams = (
   return { params, notUsedParams };
 };
 
-const convertTamilEC = async (sourceLocation, destinationPath) => {
-  if (!sourceLocation || !destinationPath) {
-    logger.error("Source or destination location not provided");
-    throw new Error("Source or destination location not provided");
+const convertTamilEC = async (
+  sourceLocation,
+  destinationPath,
+  startDate,
+  caseId
+) => {
+  if (!sourceLocation || !destinationPath || !startDate || !caseId) {
+    logger.error(
+      "Source location, destination path, start date, or case ID not provided"
+    );
+    throw new Error(
+      "Source location, destination path, start date, or case ID not provided"
+    );
   }
 
   if (!ecUrl || !ecSecret) {
@@ -198,13 +207,32 @@ const convertTamilEC = async (sourceLocation, destinationPath) => {
   }
 
   try {
-    const fileKey = Date.now().toString();
+    // Calculate endDate (yesterday) and year difference
+    const endDate = moment().subtract(1, "day").format("YYYY-MM-DD");
+    const startMoment = moment(startDate, "YYYY-MM-DD");
+    const endMoment = moment(endDate, "YYYY-MM-DD");
+    const yearDifference = endMoment.diff(startMoment, "years");
+
+    if (yearDifference < 0) {
+      logger.error("Invalid date range: startDate is after endDate");
+      throw new Error("Invalid date range: startDate is after endDate");
+    }
+
+    const fileKey = Date.now().toString(); // Unique key for the converted file
+
+    // Construct the request payload
+    const requestPayload = {
+      source_key: `${destinationPath}/${sourceLocation}`,
+      destination_key: `${destinationPath}/${fileKey}`,
+      start_date: startMoment.format("YYYY-MM-DD"), // ISO format for API
+      end_date: endMoment.format("YYYY-MM-DD"), // ISO format for API
+      year: yearDifference,
+      case_id: caseId,
+    };
+
     const response = await axios.post(
       `${ecUrl}/convert_tamil_ec`,
-      {
-        source_key: destinationPath + "/" + sourceLocation,
-        destination_key: destinationPath + "/" + fileKey,
-      },
+      requestPayload,
       {
         headers: {
           "x-token": ecSecret,
@@ -224,7 +252,7 @@ const convertTamilEC = async (sourceLocation, destinationPath) => {
     logger.info("Successfully converted Tamil EC");
     return fileKey;
   } catch (error) {
-    logger.error(`Error during Tamil EC conversion: ${error}`);
+    logger.error(`Error during Tamil EC conversion: ${error.message}`);
     throw error;
   }
 };
