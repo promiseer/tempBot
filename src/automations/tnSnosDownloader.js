@@ -61,7 +61,7 @@ async function clickAndSearchSnos(
       { timeout: 60000 }
     );
     await selectDropdownOption(page, "#cmb_Village", village);
-    await page.type("#txt_SurveyNo", surveyNo);
+    await page.type("#txt_SurveyNo", surveyNo.split("/")[0]);
 
     logger.info("Form filled successfully.");
 
