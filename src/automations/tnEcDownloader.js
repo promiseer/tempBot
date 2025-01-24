@@ -21,7 +21,7 @@ async function tnEcDownloader({
   surveyNo,
   zone,
   encumbranceType,
-  ecStartDate,
+  startDate:ecStartDate,
 }) {
   logger.info(":: TN EC Downloader Automation Started");
 
