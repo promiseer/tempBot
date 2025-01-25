@@ -21,7 +21,7 @@ async function tnEcDownloader({
   surveyNo,
   zone,
   encumbranceType,
-  startDate:ecStartDate,
+  startDate,
 }) {
   logger.info(":: TN EC Downloader Automation Started");
 
@@ -83,7 +83,7 @@ async function tnEcDownloader({
       switch (encumbranceType) {
         case "ENCUMBRANCE_TYPE.SNOS":
           const endDate = moment().subtract(1, "days").format("DD-MMM-YYYY");
-          const startDate = moment(ecStartDate, "DD/MM/YYYY").format(
+          const ecStartDate = moment(startDate, "DD/MM/YYYY").format(
             "DD-MMM-YYYY"
           );
           filePath = await clickAndSearchSnos(
@@ -91,7 +91,7 @@ async function tnEcDownloader({
             zone,
             district,
             sroName,
-            startDate,
+            ecStartDate,
             endDate,
             village,
             surveyNo

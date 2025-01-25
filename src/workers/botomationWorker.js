@@ -19,7 +19,7 @@ const processJob = async (job) => {
     caseId,
     filePath: fileDestination,
     encumbranceType,
-    ecStartDate,
+    startDate,
   } = data;
 
   logger.info(
@@ -98,7 +98,7 @@ const processJob = async (job) => {
             const convertedPath = await convertTamilEC(
               file,
               fileDestination,
-              ecStartDate,
+              startDate,
               caseId
             );
             await createAttachement(
