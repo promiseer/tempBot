@@ -14,7 +14,13 @@ const cluster = require("cluster");
 const totalCPUs = require("os").cpus().length;
 const processJob = async (job) => {
   const { queue, data, id } = job;
-  const { state, caseId, filePath: fileDestination, encumbranceType } = data;
+  const {
+    state,
+    caseId,
+    filePath: fileDestination,
+    encumbranceType,
+    startDate,
+  } = data;
 
   logger.info(
     `Received job for queue: ${queue.name} and Job ID:${id} encumbranceType::${encumbranceType}`
@@ -89,7 +95,12 @@ const processJob = async (job) => {
             );
             await deleteFile(filePath);
             logger.info(`Converting tamil ec`);
-            const convertedPath = await convertTamilEC(file, fileDestination);
+            const convertedPath = await convertTamilEC(
+              file,
+              fileDestination,
+              startDate,
+              caseId
+            );
             await createAttachement(
               caseId,
               convertedPath,
