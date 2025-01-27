@@ -208,9 +208,9 @@ const convertTamilEC = async (
 
   try {
     // Calculate endDate (yesterday) and year difference
-    const endDate = moment().subtract(1, "day").format("YYYY-MM-DD");
-    const startMoment = moment(startDate, "YYYY-MM-DD");
-    const endMoment = moment(endDate, "YYYY-MM-DD");
+    const endDate = moment().subtract(1, "day").format("DD/MM/YYYY");
+    const startMoment = moment(startDate, "DD/MM/YYYY");
+    const endMoment = moment(endDate, "DD/MM/YYYY");
     const yearDifference = endMoment.diff(startMoment, "years");
 
     if (yearDifference < 0) {
@@ -224,8 +224,8 @@ const convertTamilEC = async (
     const requestPayload = {
       source_key: `${destinationPath}/${sourceLocation}`,
       destination_key: `${destinationPath}/${fileKey}`,
-      start_date: startMoment.format("YYYY-MM-DD"), // ISO format for API
-      end_date: endMoment.format("YYYY-MM-DD"), // ISO format for API
+      start_date: startDate,
+      end_date: endDate,
       year: yearDifference,
       case_id: caseId,
     };
