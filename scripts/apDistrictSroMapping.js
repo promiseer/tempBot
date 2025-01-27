@@ -1,11 +1,3 @@
-const axios = require("axios");
-const {
-  villageDistrictBackup,
-  insertLatestSro,
-  restoreLatestSros,
-} = require("../src/services/nirnai.service");
-const logger = require("../utils/logger");
-
 const districts = [
   {
     id: "TUQvTmYvTXc9PQ==",
@@ -138,56 +130,38 @@ const districts = [
     drname: "WEST GODAVARI",
   },
 ];
+const axios = require("axios");
+const fs = require("fs");
 
-const fetchApSroDistricts = async () => {
-  const districtSroMapping = [];
+const { delay } = require("../utils/pupeteer");
+const districtSroMapping = [];
 
-  await Promise.all(
-    districts.map(async (district) => {
-      try {
-        const response = await axios.post(
-          `http://registration.ec.ap.gov.in/ecSearchAPI/v1/public/getSroList`,
-          {
-            params: {
-              drCode: district.id,
-            },
-          }
-        );
-
-        if (response.data && response.data.data) {
-          const districtData = response.data.data.map((sro) => ({
-            tenant: "38784e96-6b31-4fa1-9072-648304b6b67d",
-            code: "STATE.ANDHRA_PRADESH",
-            state: "ANDHRA PRADESH",
-            district: district.drname,
-            sroName: sro.srname,
-            createdUser: "4cdfcf9b-0cc9-4c70-9686-22856d6ed01f",
-            createdTenant: "0a2ab4d3-4070-4b5f-bcb0-9611a07e0c49",
-          }));
-
-          districtSroMapping.push(...districtData);
-        }
-      } catch (error) {
-        console.error(
-          `Error fetching SRO for district ${district.drname}:`,
-          error
-        );
-      }
-    })
+const promises = districts.map(async (district) => {
+  const response = await axios.post(
+    `http://registration.ec.ap.gov.in/ecSearchAPI/v1/public/getSroList`,
+    {
+      params: {
+        drCode: district.id,
+      },
+    }
   );
-  return districtSroMapping;
-};
 
-const apProcedure = async () => {
-  let state = "ANDHRA PRADESH";
-  try {
-    apData = await fetchApSroDistricts();
-    const backupResponse = await villageDistrictBackup({ state }); //backupResponse
-    const insertResponse = await insertLatestSro(apData); //insert latest data
-  } catch (error) {
-    logger.error(`Error occured: ${error.message}`);
-    const restoreResponse = restoreLatestSros({ state }); //rollback
-  }
-};
+  return {
+    district: district.drname,
+    sro: response.data.data.map((sro) => sro.srname),
+  };
+});
 
-apProcedure();
+Promise.all(promises)
+  .then((data) => {
+    districtSroMapping.push(...data); // Spread operator to add all elements
+    console.log(districtSroMapping);
+
+    fs.writeFileSync(
+      "apDistrictSroMapping.json",
+      JSON.stringify(districtSroMapping)
+    );
+  })
+  .catch((error) => {
+    console.error(error);
+  });

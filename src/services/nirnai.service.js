@@ -38,116 +38,6 @@ const getToken = async () => {
   }
 };
 
-const villageDistrictBackup = async (payload) => {
-  try {
-    const token = await getToken();
-
-    const response = await axios.post(
-      `${backendUrl}/village/backup`,
-      { ...payload },
-      {
-        headers: { Authorization: `Bearer ${token}` },
-      }
-    );
-
-    if (response.status !== 201) {
-      logger.error(`Failed to backup: ${response.status} ${response.data}`);
-      throw new Error(`Failed to backup: ${response.data}`);
-    }
-
-    return response;
-  } catch (error) {
-    throw error;
-  }
-};
-
-const insertLatestSro = async (payload) => {
-  try {
-    const token = await getToken();
-    const response = await axios.post(
-      `${backendUrl}/sro/insert-latest`,
-      payload,
-      {
-        headers: { Authorization: `Bearer ${token}` },
-      }
-    );
-
-    if (response.status !== 201) {
-      logger.error(`Failed to insert: ${response.status} ${response.data}`);
-      throw new Error(`Failed to insert: ${response.data}`);
-    }
-
-    return response;
-  } catch (error) {
-    throw error;
-  }
-};
-
-const insertLatestVillages = async (payload) => {
-  try {
-    const token = await getToken();
-    const response = await axios.post(
-      `${backendUrl}/village/insert-latest`,
-      { ...payload },
-      {
-        headers: { Authorization: `Bearer ${token}` },
-      }
-    );
-
-    if (response.status !== 201) {
-      logger.error(`Failed to insert: ${response.status} ${response.data}`);
-      throw new Error(`Failed to insert: ${response.data}`);
-    }
-
-    return response;
-  } catch (error) {
-    throw error;
-  }
-};
-
-const restoreLatestSros = async (payload) => {
-  try {
-    const token = await getToken();
-    const response = await axios.post(
-      `${backendUrl}/sro/restore`,
-      { ...payload },
-      {
-        headers: { Authorization: `Bearer ${token}` },
-      }
-    );
-
-    if (response.status !== 201) {
-      logger.error(`Failed to restore: ${response.status} ${response.data}`);
-      throw new Error(`Failed to restore: ${response.data}`);
-    }
-
-    return response;
-  } catch (error) {
-    throw error;
-  }
-};
-
-const restoreLatestVillages = async (payload) => {
-  try {
-    const token = await getToken();
-    const response = await axios.post(
-      `${backendUrl}/village/restore`,
-      { ...payload },
-      {
-        headers: { Authorization: `Bearer ${token}` },
-      }
-    );
-
-    if (response.status !== 201) {
-      logger.error(`Failed to restore: ${response.status} ${response.data}`);
-      throw new Error(`Failed to restore: ${response.data}`);
-    }
-    return response;
-  } catch (error) {
-    throw error;
-  }
-};
-
 const createAttachement = async (
   caseId,
   file,
@@ -296,19 +186,10 @@ const getParams = (
   return { params, notUsedParams };
 };
 
-const convertTamilEC = async (
-  sourceLocation,
-  destinationPath,
-  startDate,
-  caseId
-) => {
-  if (!sourceLocation || !destinationPath || !startDate || !caseId) {
-    logger.error(
-      "Source location, destination path, start date, or case ID not provided"
-    );
-    throw new Error(
-      "Source location, destination path, start date, or case ID not provided"
-    );
+const convertTamilEC = async (sourceLocation, destinationPath) => {
+  if (!sourceLocation || !destinationPath) {
+    logger.error("Source or destination location not provided");
+    throw new Error("Source or destination location not provided");
   }
 
   if (!ecUrl || !ecSecret) {
@@ -317,32 +198,13 @@ const convertTamilEC = async (
   }
 
   try {
-    // Calculate endDate (yesterday) and year difference
-    const endDate = moment().subtract(1, "day").format("DD/MM/YYYY");
-    const startMoment = moment(startDate, "DD/MM/YYYY");
-    const endMoment = moment(endDate, "DD/MM/YYYY");
-    const yearDifference = endMoment.diff(startMoment, "years");
-
-    if (yearDifference < 0) {
-      logger.error("Invalid date range: startDate is after endDate");
-      throw new Error("Invalid date range: startDate is after endDate");
-    }
-
-    const fileKey = Date.now().toString(); // Unique key for the converted file
-
-    // Construct the request payload
-    const requestPayload = {
-      source_key: `${destinationPath}/${sourceLocation}`,
-      destination_key: `${destinationPath}/${fileKey}`,
-      start_date: startDate,
-      end_date: endDate,
-      year: yearDifference,
-      case_id: caseId,
-    };
-
+    const fileKey = Date.now().toString();
     const response = await axios.post(
       `${ecUrl}/convert_tamil_ec`,
-      requestPayload,
+      {
+        source_key: destinationPath + "/" + sourceLocation,
+        destination_key: destinationPath + "/" + fileKey,
+      },
       {
         headers: {
           "x-token": ecSecret,
@@ -362,19 +224,9 @@ const convertTamilEC = async (
     logger.info("Successfully converted Tamil EC");
     return fileKey;
   } catch (error) {
-    logger.error(`Error during Tamil EC conversion: ${error.message}`);
+    logger.error(`Error during Tamil EC conversion: ${error}`);
     throw error;
   }
 };
 
-module.exports = {
-  getToken,
-  createAttachement,
-  convertTamilEC,
-  stitchEcsM,
-  villageDistrictBackup,
-  insertLatestSro,
-  insertLatestVillages,
-  restoreLatestSros,
-  restoreLatestVillages,
-};
+module.exports = { getToken, createAttachement, convertTamilEC, stitchEcsM };
