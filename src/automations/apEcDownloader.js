@@ -281,8 +281,14 @@ const handleSecondForm = async (
     );
     logger.info("3rd CAPTCHA", captchaText);
 
+    errorCaptcha = elementFinder(
+      page,
+      "#__next > div > div:nth-child(3) > div.MainContent > div > div > div > div > div > form > div.p.row > div.col-lg-3.col-md-3.col-3 > div"
+    );
+    if (errorCaptcha) {
+      logger.info("Captcha error found");
+    }
     await page.type('form input[name="captchaVal"]', captchaText);
-    logger.info("captcha filled");
 
     // Select MultipleSRO values
     if (sroList.length) {
@@ -303,12 +309,9 @@ const handleSecondForm = async (
     }
     await delay(2000);
     await clickButton(page, "#selectAllId");
-    logger.info("selected all txns");
-    await delay(2000);
     await clickButton(page, ".btn.btn-primary");
 
     await page.waitForNavigation();
-    logger.info("Genrating the PDF...");
     const filePath = await generatePDF(
       page,
       "#__next > div > div:nth-child(2) > div > div.container > div:nth-child(2) > div > table",
