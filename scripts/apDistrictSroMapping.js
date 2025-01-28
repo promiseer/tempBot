@@ -183,7 +183,9 @@ const apProcedure = async () => {
   try {
     apData = await fetchApSroDistricts();
     const backupResponse = await villageDistrictBackup({ state }); //backupResponse
+    logger.info("AP backup done successfully!")
     const insertResponse = await insertLatestSro(apData); //insert latest data
+    logger.info("AP sro data updated successfully!")
   } catch (error) {
     logger.error(`Error occured: ${error.message}`);
     const restoreResponse = restoreLatestSros({ state }); //rollback
