@@ -103,29 +103,32 @@ const getMandalDetails = async (district, headers) => {
 
   if (!mandalDetails || !mandalDetails.mandalDetails) return [];
 
-  const districtMandalVillageData = await Promise.all(
-    mandalDetails.mandalDetails.map(async (mandal) => {
-      const villages = await getVillageDetails(
-        district.drcode,
-        mandal.mandal_code,
-        headers
+  const districtMandalVillageData = [];
+  for (let mandal of mandalDetails.mandalDetails) {
+    const villages = await getVillageDetails(
+      district.drcode,
+      mandal.mandal_code,
+      headers
+    );
+
+    if (villages.length > 0) {
+      villages.forEach((village) =>
+        districtMandalVillageData.push({
+          state: "TELANGANA",
+          district: district.drname,
+          mandal: mandal.mandal_name,
+          village: village.village_name,
+          sroName: null,
+          zone: null,
+          town: null,
+          createdUser: "4cdfcf9b-0cc9-4c70-9686-22856d6ed01f",
+          createdTenant: "0a2ab4d3-4070-4b5f-bcb0-9611a07e0c49",
+        })
       );
+    }
+  }
 
-      return villages.map((village) => ({
-        state: "TELANGANA",
-        district: district.drname,
-        mandal: mandal.mandal_name,
-        village: village.village_name,
-        sroName: null,
-        zone: null,
-        town: null,
-        createdUser: "4cdfcf9b-0cc9-4c70-9686-22856d6ed01f",
-        createdTenant: "0a2ab4d3-4070-4b5f-bcb0-9611a07e0c49",
-      }));
-    })
-  );
-
-  return districtMandalVillageData.flat();
+  return districtMandalVillageData;
 };
 
 const getVillageDetails = async (districtCode, mandalCode, headers) => {
