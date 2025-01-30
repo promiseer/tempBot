@@ -95,8 +95,8 @@ const tgProcedure = async () => {
 
     await villageDistrictBackup({ state }); //backupResponse
     logger.info("TG backup done successfully!");
-    await insertLatestSro(apData); //insert latest data
-    await insertLatestVillages(apData); //insert latest data
+    await insertLatestSro(tgSroDistrictsData); //insert latest data
+    await insertLatestVillages(tgVillageMandalData); //insert latest data
     logger.info("TG sro data updated successfully!");
   } catch (error) {
     logger.error(`Error occured: ${error.message}`);
