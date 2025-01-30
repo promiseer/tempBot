@@ -5,6 +5,7 @@ const pathModule = require("path");
 const logger = require("./logger");
 const { PDFDocument } = require("pdf-lib");
 const { deleteFile } = require("./deleteFile");
+const { default: axios } = require("axios");
 
 const solver = new Captcha.Solver(process.env.CAPTCHA_KEY);
 
@@ -473,6 +474,40 @@ async function mergePNGScreenshots(pngOnlyPaths, mergedPdf) {
     await deleteFile(pngPath); // Optional: Delete original PNG after merging
   }
 }
+const makeRequest = async (
+  url,
+  method,
+  headers = {},
+  data = null,
+  retries = 3
+) => {
+  let attempt = 0;
+
+  while (attempt < retries) {
+    try {
+      let response;
+      const config = { headers };
+
+      if (method === "get") {
+        response = await axios.get(url, config);
+      } else if (method === "post") {
+        response = await axios.post(url, data, config);
+      } else {
+        throw new Error("Unsupported HTTP method");
+      }
+
+      return response; // Success, return the response
+    } catch (error) {
+      if (error.code === "ECONNRESET" && attempt < retries - 1) {
+        attempt++;
+        console.log(`Retry attempt ${attempt}...`);
+        await delay(1000);
+      } else {
+        throw error;
+      }
+    }
+  }
+};
 
 module.exports = {
   puppeteerInstance,
@@ -489,4 +524,5 @@ module.exports = {
   elementFinder,
   generatePDF,
   mergePDFs,
+  makeRequest,
 };

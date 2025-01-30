@@ -38,6 +38,7 @@ const districts = [
 
 const axios = require("axios");
 const logger = require("../utils/logger");
+const { makeRequest } = require("../utils/pupeteer");
 const fetchTgVillageMandal = require("./tgMandalVillageMapping");
 const {
   insertLatestVillages,
@@ -45,13 +46,15 @@ const {
   insertLatestSro,
   restoreLatestSros,
 } = require("../src/services/nirnai.service");
+
 const districtSroMapping = [];
 const fetchTgSroDistricts = async () => {
   await Promise.all(
     districts.map(async (district) => {
       try {
-        const response = await axios.get(
-          `https://registration.telangana.gov.in/getsrolist.htm?districtCode=${district.drcode}`
+        const response = await makeRequest(
+          `https://registration.telangana.gov.in/getsrolist.htm?districtCode=${district.drcode}`,
+          "get"
         );
         if (response.data) {
           const districtData = response.data
