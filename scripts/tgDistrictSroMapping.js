@@ -37,36 +37,72 @@ const districts = [
 ];
 
 const axios = require("axios");
-const fs = require("fs");
-const { delay } = require("../utils/pupeteer");
+const logger = require("../utils/logger");
+const { makeRequest } = require("../utils/pupeteer");
+const fetchTgVillageMandal = require("./tgMandalVillageMapping");
+const {
+  insertLatestVillages,
+  villageDistrictBackup,
+  insertLatestSro,
+  restoreLatestSros,
+} = require("../src/services/nirnai.service");
+
 const districtSroMapping = [];
-
-const promises = districts.map(async (district) => {
-  const response = await axios.get(
-    `https://registration.telangana.gov.in/getsrolist.htm?districtCode=${district.drcode}`
+const fetchTgSroDistricts = async () => {
+  await Promise.all(
+    districts.map(async (district) => {
+      try {
+        const response = await makeRequest(
+          `https://registration.telangana.gov.in/getsrolist.htm?districtCode=${district.drcode}`,
+          "get"
+        );
+        if (response.data) {
+          const districtData = response.data
+            .split("##")
+            .filter((item) => item && item.trim() !== "")
+            .map((item) => {
+              const [name, code] = item.split("/");
+              return {
+                tenant: "38784e96-6b31-4fa1-9072-648304b6b67d",
+                code: "STATE.TELANGANA",
+                state: "TELANGANA",
+                district: district.drname,
+                sroName: `${name}(${code})`,
+                createdUser: "4cdfcf9b-0cc9-4c70-9686-22856d6ed01f",
+                createdTenant: "0a2ab4d3-4070-4b5f-bcb0-9611a07e0c49",
+              };
+            });
+          districtSroMapping.push(...districtData);
+        } else {
+          throw new Error("data not found");
+        }
+      } catch (error) {
+        logger.error(
+          `Error fetching SRO for district ${district.drname}:`,
+          error
+        );
+      }
+    })
   );
+  return districtSroMapping;
+};
 
-  return {
-    district: district.drname,
-    sro: response.data
-      .split("##")
-      .filter((item) => item && item.trim() !== "")
-      .map((item) => {
-        const [name, code] = item.split("/");
-        return `${name}(${code})`;
-      }),
-  };
-});
+const tgProcedure = async () => {
+  let state = "TELANGANA";
+  try {
+    tgVillageMandalData = await fetchTgVillageMandal();
+    tgSroDistrictsData = await fetchTgSroDistricts();
 
-Promise.all(promises)
-  .then((data) => {
-    districtSroMapping.push(...data); // Spread operator to add all elements
+    await villageDistrictBackup({ state }); //backupResponse
+    logger.info("TG backup done successfully!");
+    await insertLatestSro(tgSroDistrictsData); //insert latest data
+    await insertLatestVillages(tgVillageMandalData); //insert latest data
+    logger.info("TG sro data updated successfully!");
+  } catch (error) {
+    logger.error(`Error occured: ${error.message}`);
+    await restoreLatestSros({ state }); //rollback
+    await restoreLatestSros({ state }); //rollback
+  }
+};
 
-    fs.writeFileSync(
-      "tgDistrictSroMapping.json",
-      JSON.stringify(districtSroMapping)
-    );
-  })
-  .catch((error) => {
-    console.error(error);
-  });
+tgProcedure();

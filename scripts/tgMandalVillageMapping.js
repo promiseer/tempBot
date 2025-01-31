@@ -29,88 +29,126 @@ const districts = [
   { drname: "SIDDIPET", drcode: "17_3" },
   { drname: "SURYAPET", drcode: "23_2" },
   { drname: "VIKARABAD", drcode: "15_3" },
-  { drname: "VIKARABAD", drcode: "15_3" },
-  { drname: "VIKARABAD", drcode: "15_3" },
   { drname: "WANAPARTHY", drcode: "14_4" },
   { drname: "WARANGAL", drcode: "21_2" },
   { drname: "YADADRI BHUVANAGIRI", drcode: "23_3" },
 ];
 
 const axios = require("axios");
-const fs = require("fs");
-const headers = {
-  Cookie:
-    "BIGipServerregistration.telangana.gov.in_HTTPS_pool=1433143818.47873.0000; JSESSIONID=Zn2fn1Sd1XytKKSGHpqBDzB3pHBKlYF1jpK466JXpHLd7QwRcfVj!2077272998!1736397661562; TS016bddd0=01646265bc58448b9a13c19fc260191de538a783a14d068b07b7bfd0aa7a721243db5954684d8ffdeb52df798ff8de2243f979fc53355784870b22da021b5c605fc6830f386a120728c2ed8d5f4f315141ba5c413f1c4234da973221af481c63485531aaa7",
-  Referer:
-    "https://registration.telangana.gov.in/EncumbranceCertificate/Search_Form.htm",
-};
+const { puppeteerInstance, makeRequest, delay } = require("../utils/pupeteer");
+const { handleLogin } = require("../src/automations/tgEcDownloader");
+const logger = require("../utils/logger");
 
-const fetchData = async (url) => {
+let cachedCookies = null; // Variable to cache cookies
+
+const getCookies = async () => {
   try {
-    const response = await axios.post(url, null, { headers });
-    return response.data;
+    const browser = await puppeteerInstance();
+    let page = await browser.newPage();
+    page = await handleLogin(page, browser);
+    await delay(1000);
+    const cookies = await page.cookies();
+    const serverPoolValue = cookies.find(
+      (cookie) =>
+        cookie.name === "BIGipServerregistration.telangana.gov.in_HTTPS_pool"
+    )?.value;
+    let sessionValue = cookies.find(
+      (cookie) => cookie.name === "JSESSIONID"
+    )?.value;
+    const tsValue = cookies.find(
+      (cookie) => cookie.name === "TS016bddd0"
+    )?.value;
+
+    if (sessionValue && tsValue) {
+      await page.close();
+      await browser.close();
+
+      cachedCookies = `BIGipServerregistration.telangana.gov.in_HTTPS_pool=${serverPoolValue}; JSESSIONID=${sessionValue}; TS016bddd0=${tsValue}`;
+      return cachedCookies;
+    } else {
+      throw new Error("Cookie values not found");
+    }
   } catch (error) {
-    console.error("Error fetching data:", error);
-    return null;
+    throw error;
   }
 };
 
-// Function to get mandals and villages for a district
-const getMandalDetails = async (district) => {
-  // Get mandal details for the district
-  const mandalDetails = await fetchData(
-    `https://registration.telangana.gov.in/EncumbranceCertificate/MandalDetails.htm?dist_code=${district.drcode}`
+// Function to get headers, including cookies
+const getHeaders = async () => {
+  const cookies = await getCookies()
+  return {
+    cookie: cookies,
+    Referer:
+      "https://registration.telangana.gov.in/EncumbranceCertificate/Search_Form.htm",
+  };
+};
+
+const getMandalDetails = async (district, headers) => {
+  const { data: mandalDetails } = await makeRequest(
+    `https://registration.telangana.gov.in/EncumbranceCertificate/MandalDetails.htm?dist_code=${district.drcode}`,
+    "post",
+    headers
   );
 
-  if (!mandalDetails || !mandalDetails.mandalDetails) return [];
+  if (mandalDetails?.message === "fail") {
+    logger.error("invalid cookies");
+    return [];
+  }
+
+  if (!mandalDetails?.mandalDetails.length) {
+    return [];
+  }
 
   const districtMandalVillageData = [];
-
-  // Process each mandal
   for (let mandal of mandalDetails.mandalDetails) {
     const villages = await getVillageDetails(
       district.drcode,
-      mandal.mandal_code
+      mandal.mandal_code,
+      headers
     );
 
     if (villages.length > 0) {
-      // Add the district, mandal, and village data to the result
-      districtMandalVillageData.push({
-        district: district.drname,
-        mandal: mandal.mandal_name,
-        villages: villages.map((village) => village.village_name),
-      });
+      villages.forEach((village) =>
+        districtMandalVillageData.push({
+          state: "TELANGANA",
+          district: district.drname,
+          mandal: mandal.mandal_name,
+          village: village.village_name,
+          sroName: null,
+          zone: null,
+          town: null,
+          createdUser: "4cdfcf9b-0cc9-4c70-9686-22856d6ed01f",
+          createdTenant: "0a2ab4d3-4070-4b5f-bcb0-9611a07e0c49",
+        })
+      );
     }
   }
 
   return districtMandalVillageData;
 };
 
-const getVillageDetails = async (districtCode, mandalCode) => {
-  const villageDetails = await fetchData(
-    `https://registration.telangana.gov.in/EncumbranceCertificate/VillageDetails.htm?dist_code=${districtCode}&mandal_code=${mandalCode}`
+const getVillageDetails = async (districtCode, mandalCode, headers) => {
+  const { data: villageDetails } = await makeRequest(
+    `https://registration.telangana.gov.in/EncumbranceCertificate/VillageDetails.htm?dist_code=${districtCode}&mandal_code=${mandalCode}`,
+    "post",
+    headers
   );
-
   return villageDetails && villageDetails.villageDetails
     ? villageDetails.villageDetails
     : [];
 };
-// Function to fetch data for all districts
-const fetchAllDistrictsData = async (districts) => {
-  const allDistrictData = [];
 
-  for (let district of districts) {
-    const districtData = await getMandalDetails(district);
-    allDistrictData.push(...districtData);
-  }
+const fetchTgVillageMandal = async () => {
+  const mandalVillageMapping = [];
+  const headers = await getHeaders();
+  await Promise.all(
+    districts.map(async (district) => {
+      const districtData = await getMandalDetails(district, headers);
+      mandalVillageMapping.push(...districtData);
+    })
+  );
 
-  return allDistrictData;
+  return mandalVillageMapping;
 };
 
-// Fetch data and output
-fetchAllDistrictsData(districts).then((data) => {
-  fs.writeFileSync(
-    "tgMandalVillageMapping.json",
-    JSON.stringify(data, null, 2)
-  );
-});
+module.exports = fetchTgVillageMandal;

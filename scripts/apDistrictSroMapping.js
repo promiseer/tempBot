@@ -164,8 +164,9 @@ const fetchApSroDistricts = async () => {
             createdUser: "4cdfcf9b-0cc9-4c70-9686-22856d6ed01f",
             createdTenant: "0a2ab4d3-4070-4b5f-bcb0-9611a07e0c49",
           }));
-
           districtSroMapping.push(...districtData);
+        } else {
+          throw new Error("data not found");
         }
       } catch (error) {
         console.error(
@@ -183,10 +184,12 @@ const apProcedure = async () => {
   try {
     apData = await fetchApSroDistricts();
     const backupResponse = await villageDistrictBackup({ state }); //backupResponse
+    logger.info("AP backup done successfully!");
     const insertResponse = await insertLatestSro(apData); //insert latest data
+    logger.info("AP sro data updated successfully!");
   } catch (error) {
     logger.error(`Error occured: ${error.message}`);
-    const restoreResponse = restoreLatestSros({ state }); //rollback
+    await restoreLatestSros({ state }); //rollback
   }
 };
 

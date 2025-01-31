@@ -88,7 +88,7 @@ const insertLatestVillages = async (payload) => {
     const token = await getToken();
     const response = await axios.post(
       `${backendUrl}/village/insert-latest`,
-      { ...payload },
+      payload ,
       {
         headers: { Authorization: `Bearer ${token}` },
       }

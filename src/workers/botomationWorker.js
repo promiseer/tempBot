@@ -3,7 +3,7 @@ const { deleteFile } = require("../../utils/deleteFile");
 const { uploadFileGC } = require("../../utils/googleBucketUtils");
 const logger = require("../../utils/logger");
 const apEcDownloader = require("../automations/apEcDownloader");
-const tgEcDownloader = require("../automations/tgEcDownloader");
+const { tgEcDownloader } = require("../automations/tgEcDownloader");
 const tnEcDowloader = require("../automations/tnEcDownloader");
 const kaEcDownloader = require("../automations/kaEcDownloader");
 const {
