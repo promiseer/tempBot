@@ -82,6 +82,7 @@ const handleLogin = async (page, docNo, docYear, sroName) => {
     logger.info("Form submitted successfully!");
   } catch (error) {
     logger.error("Error during the process:", error);
+    throw error
   }
 };
 
