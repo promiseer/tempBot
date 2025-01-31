@@ -57,14 +57,14 @@ const saveSessionData = async (page, cookiesFilePath, localStorageFilePath) => {
 const dropDownSelector = async (page, selector, text) => {
   await page.waitForSelector(selector);
   await page.click(selector); // Click to open the dropdown
-  await page.locator(selector).fill(text);
+  await page.type(selector, text);
   await page.keyboard.press("Enter"); // Press Enter to select
 };
 
 const fillInput = async (page, selector, text) => {
   await page.waitForSelector(selector);
   await page.click(selector); // Click to open the dropdown
-  await page.locator(selector).fill(text);
+  await page.type(selector, text);
 };
 const selectOption = async (page, selector, value) => {
   const selectedOption = await getSelectedOption(page, selector, value);
@@ -89,17 +89,16 @@ const getSelectedOption = async (page, selector, value) => {
   return matchedOption ? matchedOption[value] : null;
 };
 
-const clickButton = async (page, selector, maxAttempts = 3, sleep = 1000) => {
+const clickButton = async (page, selector, maxAttempts = 3, sleep = 1000) => { 
   let attempts = 0;
   let clicked = false;
 
   while (attempts < maxAttempts && !clicked) {
     try {
       await page.waitForSelector(selector);
-      const button = await page.locator(selector);
-      if (await button.wait()) {
+      const button = await page.$(selector);  // Use page.$ instead of locator
+      if (button) {
         await button.click(); // Click the button
-        // logger.info(`Button  clicked on attempt ${attempts + 1}`);
         clicked = true;
       } else {
         logger.info(`Button not visible on attempt ${attempts + 1}`);
