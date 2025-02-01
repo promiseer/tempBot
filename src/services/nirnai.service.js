@@ -207,10 +207,18 @@ const convertTamilEC = async (
   }
 
   try {
-    // Calculate endDate (yesterday) and year difference
-    const endDate = moment().subtract(1, "day").format("YYYY-MM-DD");
-    const startMoment = moment(startDate, "YYYY-MM-DD");
-    const endMoment = moment(endDate, "YYYY-MM-DD");
+    const startMoment = moment(startDate, "DD/MM/YYYY", true);
+    if (!startMoment.isValid()) {
+      logger.error("Invalid startDate format. Must be in DD/MM/YYYY format.");
+      throw new Error(
+        "Invalid startDate format. Must be in DD/MM/YYYY format."
+      );
+    }
+
+    // Calculate endDate as yesterday
+    const endMoment = moment().subtract(1, "day");
+
+    // Calculate the difference in years
     const yearDifference = endMoment.diff(startMoment, "years");
 
     if (yearDifference < 0) {
@@ -218,14 +226,13 @@ const convertTamilEC = async (
       throw new Error("Invalid date range: startDate is after endDate");
     }
 
-    const fileKey = Date.now().toString(); // Unique key for the converted file
+    const fileKey = Date.now().toString();
 
-    // Construct the request payload
     const requestPayload = {
       source_key: `${destinationPath}/${sourceLocation}`,
       destination_key: `${destinationPath}/${fileKey}`,
-      start_date: startMoment.format("YYYY-MM-DD"), // ISO format for API
-      end_date: endMoment.format("YYYY-MM-DD"), // ISO format for API
+      start_date: startMoment.format("DD/MM/YYYY"),
+      end_date: endMoment.format("DD/MM/YYYY"),
       year: yearDifference,
       case_id: caseId,
     };
