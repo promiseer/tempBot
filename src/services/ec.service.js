@@ -54,7 +54,7 @@ const encumbranceLookup = Object.entries(encumbranceMapping).reduce(
 );
 
 const generateEncumbranceJobs = async (body) => {
-  const { encumbranceTypes } = body;
+  const { encumbranceTypes, otherZones } = body;
 
   let jobIds = await Promise.all(
     encumbranceTypes.map(async (encumbranceType) => {
@@ -75,6 +75,50 @@ const generateEncumbranceJobs = async (body) => {
   );
 
   jobIds = jobIds.flat(); // Ensure job IDs are flattened
+
+  if (
+    body.state === "TAMIL NADU" &&
+    Array.isArray(otherZones) &&
+    otherZones.length > 0
+  ) {
+    const baseDistrict = body.district;
+    const baseSroName = body.sroName;
+    const baseVillage = body.village;
+
+    // Exclude any zone whose district/sroName/village match the base values
+    const additionalZones = otherZones.filter(
+      (zoneObj) =>
+        !(
+          zoneObj.district === baseDistrict &&
+          zoneObj.sroName === baseSroName &&
+          zoneObj.village === baseVillage
+        )
+    );
+
+    if (additionalZones.length > 0) {
+      const extraJobIds = await Promise.all(
+        additionalZones.map(async (zoneObj) => {
+          // Clone the base body and override with the other zone details.
+          const extraJobData = { ...body };
+          extraJobData.district = zoneObj.district;
+          extraJobData.sroName = zoneObj.sroName;
+          extraJobData.village = zoneObj.village;
+          // Optionally include the "zone" property if required downstream.
+          extraJobData.zone = zoneObj.zone;
+          // Remove any otherZones array so that the extra logic is not repeated.
+          extraJobData.otherZones = [];
+          // Force the encumbranceType to ENCUMBRANCE_TYPE.SNOS.
+          extraJobData.encumbranceType = "ENCUMBRANCE_TYPE.SNOS";
+          // Remove the original encumbranceTypes if present.
+          delete extraJobData.encumbranceTypes;
+
+          const job = await Queue.add(extraJobData);
+          return job.id;
+        })
+      );
+      jobIds.push(...extraJobIds);
+    }
+  }
 
   if (!jobIds.length) {
     throw new Error(
