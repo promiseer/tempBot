@@ -156,7 +156,7 @@ async function kaEc() {
     page,
     "#mat-dialog-0 > app-perquisite > div.overlay.ng-star-inserted > div > div > div.card-body > div:nth-child(2) > button.btn.btn-primary"
   );
-
+  await delay(1000);
   logger.info("selecting District");
   await selectOption(page, 'select[name="district"]', "Basavanagudi");
   await delay(1000);

@@ -13,6 +13,10 @@ app.use(morgan("dev"));
 app.use("/api/v1/", routes);
 app.use("/admin/queues", bullBoard);
 
+// 404 handler 
+app.use("*", (req, res) => {
+  res.status(404).json({ message: "Route not found" });
+});
 app.listen(PORT, () => {
   return logger.info(`Express is listening at http://localhost:${PORT}`);
 });

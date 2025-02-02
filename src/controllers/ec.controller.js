@@ -24,8 +24,10 @@ const generateEcJobs = async (req, res) => {
       startDate,
       identifier,
       propertyType,
-      botRun
+      botRun,
+      otherZones,
     } = req.body;
+    logger.info(`:: reqBody ${JSON.stringify(req.body)}`);
 
     const requiredParams = {
       state,

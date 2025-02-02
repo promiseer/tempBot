@@ -88,7 +88,7 @@ const insertLatestVillages = async (payload) => {
     const token = await getToken();
     const response = await axios.post(
       `${backendUrl}/village/insert-latest`,
-      payload ,
+      payload,
       {
         headers: { Authorization: `Bearer ${token}` },
       }
@@ -317,10 +317,18 @@ const convertTamilEC = async (
   }
 
   try {
-    // Calculate endDate (yesterday) and year difference
-    const endDate = moment().subtract(1, "day").format("DD/MM/YYYY");
-    const startMoment = moment(startDate, "DD/MM/YYYY");
-    const endMoment = moment(endDate, "DD/MM/YYYY");
+    const startMoment = moment(startDate, "DD/MM/YYYY", true);
+    if (!startMoment.isValid()) {
+      logger.error("Invalid startDate format. Must be in DD/MM/YYYY format.");
+      throw new Error(
+        "Invalid startDate format. Must be in DD/MM/YYYY format."
+      );
+    }
+
+    // Calculate endDate as yesterday
+    const endMoment = moment().subtract(1, "day");
+
+    // Calculate the difference in years
     const yearDifference = endMoment.diff(startMoment, "years");
 
     if (yearDifference < 0) {
@@ -328,14 +336,13 @@ const convertTamilEC = async (
       throw new Error("Invalid date range: startDate is after endDate");
     }
 
-    const fileKey = Date.now().toString(); // Unique key for the converted file
+    const fileKey = Date.now().toString();
 
-    // Construct the request payload
     const requestPayload = {
       source_key: `${destinationPath}/${sourceLocation}`,
       destination_key: `${destinationPath}/${fileKey}`,
-      start_date: startDate,
-      end_date: endDate,
+      start_date: startMoment.format("DD/MM/YYYY"),
+      end_date: endMoment.format("DD/MM/YYYY"),
       year: yearDifference,
       case_id: caseId,
     };
