@@ -24,7 +24,8 @@ const generateEcJobs = async (req, res) => {
       startDate,
       identifier,
       propertyType,
-      botRun
+      botRun,
+      otherZones,
     } = req.body;
 
     const requiredParams = {
