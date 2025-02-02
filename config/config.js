@@ -11,7 +11,6 @@ const requiredEnvVars = [
   "BACKEND_URL",
   "ADMIN_EMAIL",
   "ADMIN_PASSWORD",
-  "GOOGLE_API_KEY",
   "CLOUD_BUCKET_NAME",
   "REDIS_URL",
 ];
@@ -43,7 +42,7 @@ module.exports = {
   ecSecret: process.env.EC_SECRET,
   adminEmail: process.env.ADMIN_EMAIL,
   adminPassword: process.env.ADMIN_PASSWORD,
-  googleApiKey: JSON.parse(process.env.GOOGLE_API_KEY),
+  googleApiKey: JSON.parse(process.env.GOOGLE_API_KEY ?? "{}"),
   bucketName: process.env.CLOUD_BUCKET_NAME,
   redisUrl: process.env.REDIS_URL,
   imapUserName: process.env.IMAP_USERNAME,
