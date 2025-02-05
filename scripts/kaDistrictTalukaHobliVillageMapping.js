@@ -2,60 +2,87 @@ const axios = require("axios");
 const fs = require("fs");
 const { makeRequest } = require("../utils/pupeteer");
 const logger = require("../utils/logger");
-const { restoreLatestSros, restoreLatestVillages, insertLatestVillages, insertLatestSro, villageDistrictBackup } = require("../src/services/nirnai.service");
+const {
+  restoreLatestSros,
+  restoreLatestVillages,
+  insertLatestVillages,
+  insertLatestSro,
+  villageDistrictBackup,
+} = require("../src/services/nirnai.service");
 
 const getDistrictsDetails = async () => {
-  const districtDetails = await makeRequest(
-    `https://kaveri.karnataka.gov.in/api/GetDistrictAsync`,
-    "post"
-  );
+  try {
+    const districtDetails = await makeRequest(
+      `https://kaveri.karnataka.gov.in/api/GetDistrictAsync`,
+      "post"
+    );
 
-  return districtDetails.data;
+    return districtDetails.data;
+  } catch (error) {
+    throw error;
+  }
 };
 
 const getSroDetails = async (districtcode) => {
-  const sroDetails = await makeRequest(
-    `https://kaveri.karnataka.gov.in/api/GetSroDistrict`,
-    "post",
-    {},
-    { districtcode }
-  );
+  try {
+    const sroDetails = await makeRequest(
+      `https://kaveri.karnataka.gov.in/api/GetSroDistrict`,
+      "post",
+      {},
+      { districtcode }
+    );
 
-  return sroDetails.data;
+    return sroDetails.data;
+  } catch (error) {
+    throw error;
+  }
 };
 
 const getTalukaDetails = async (districtCode) => {
-  const talukaDetails = await makeRequest(
-    `https://kaveri.karnataka.gov.in/api/GetTalukaAsync`,
-    "post",
-    {},
-    {
-      districtCode,
-    }
-  );
+  try {
+    const talukaDetails = await makeRequest(
+      `https://kaveri.karnataka.gov.in/api/GetTalukaAsync`,
+      "post",
+      {},
+      {
+        districtCode,
+      }
+    );
 
-  return talukaDetails.data;
+    return talukaDetails.data;
+  } catch (error) {
+    throw error;
+  }
 };
 const getHobliDetails = async (talukaCode) => {
-  const hobliDetails = await makeRequest(
-    `https://kaveri.karnataka.gov.in/api/GetHobliAsync`,
-    "post",
-    {},
-    { talukaCode }
-  );
+  try {
+    const hobliDetails = await makeRequest(
+      `https://kaveri.karnataka.gov.in/api/GetHobliAsync`,
+      "post",
+      {},
+      { talukaCode }
+    );
 
-  return hobliDetails.data;
+    return hobliDetails.data;
+  } catch (error) {
+    throw error;
+  }
 };
 const getVillageDetails = async (hobliCode) => {
-  const villageDetails = await makeRequest(
-    `https://kaveri.karnataka.gov.in/api/GetVillageAsync`,
-    "post",
-    {},
-    { hobliCode }
-  );
+  try {
+    const villageDetails = await makeRequest(
+      `https://kaveri.karnataka.gov.in/api/GetVillageAsync`,
+      "post",
+      {},
+      { hobliCode }
+    );
 
-  return villageDetails.data;
+    return villageDetails.data;
+  } catch (error) {
+    throw error;
+  }
 };
+
 
 const fetchKAVillageDistricts = async () => {
   const villageDistrictMapping = [];
@@ -149,4 +176,4 @@ const kaProcedure = async () => {
   }
 };
 
-kaProcedure();
+// kaProcedure();
