@@ -74,7 +74,7 @@ const processJob = async (job) => {
             logger.info(`Successfully processed TG-EC with Job ID:${id}`);
           }
         } catch (error) {
-          logger.error(`Error processing TAMILNADU: ${error.message}`);
+          logger.error(`Error processing KARNATAKA: ${error.message}`);
         }
         break;
 
