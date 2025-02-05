@@ -2,6 +2,7 @@ const axios = require("axios");
 const fs = require("fs");
 const { makeRequest } = require("../utils/pupeteer");
 const logger = require("../utils/logger");
+const { restoreLatestSros, restoreLatestVillages, insertLatestVillages, insertLatestSro, villageDistrictBackup } = require("../src/services/nirnai.service");
 
 const getDistrictsDetails = async () => {
   const districtDetails = await makeRequest(
