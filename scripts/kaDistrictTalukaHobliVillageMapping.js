@@ -176,4 +176,4 @@ const kaProcedure = async () => {
   }
 };
 
-// kaProcedure();
+kaProcedure();

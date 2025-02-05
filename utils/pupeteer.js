@@ -498,7 +498,10 @@ const makeRequest = async (
 
       return response; // Success, return the response
     } catch (error) {
-      if (error.code === "ECONNRESET" && attempt < retries - 1) {
+      if (
+        (error.code === "ECONNRESET" || error?.status === 429) &&
+        attempt < retries - 1
+      ) {
         attempt++;
         console.log(`Retry attempt ${attempt}...`);
         await delay(1000);
