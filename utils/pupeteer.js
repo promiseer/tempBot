@@ -71,7 +71,7 @@ const selectOption = async (page, selector, value) => {
   if (selectedOption) {
     await page.select(selector, selectedOption);
   } else {
-    console.log(
+    logger.info(
       `Option with value '${value}' not found in selector '${selector}'`
     );
   }
@@ -206,14 +206,14 @@ const getCaptchaTextFromImage = async (
         const result = await solver.imageCaptcha(imageBase64);
         if (result?.data) {
           const captchaText = result.data.toUpperCase();
-          console.log("CAPTCHA Text:", captchaText);
+          logger.info(`CAPTCHA Text: ${captchaText}`);
           return { captchaText, imagePath };
         }
       } catch (err) {
         console.error("Error solving CAPTCHA:", err.message);
       }
 
-      console.log(`Retrying... attempts left: ${maxRetries - attempt - 1}`);
+      logger.info(`Retrying... attempts left: ${maxRetries - attempt - 1}`);
       await new Promise((resolve) => setTimeout(resolve, retryInterval)); // Wait before retrying
     }
 
@@ -323,7 +323,7 @@ const generatePDF = async (page, tableSelector, filePath, KA = false) => {
         }, tableSelector);
       } catch (error) {
         if (retryCount > 0) {
-          console.log(
+          logger.info(
             `Retrying table extraction... Attempts left: ${retryCount}`
           );
           await delay(2000); // Wait 2 seconds before retrying
@@ -481,6 +481,8 @@ const makeRequest = async (
   data = null,
   retries = 3
 ) => {
+  const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
   let attempt = 0;
 
   while (attempt < retries) {
@@ -503,7 +505,7 @@ const makeRequest = async (
         attempt < retries - 1
       ) {
         attempt++;
-        console.log(`Retry attempt ${attempt}...`);
+        logger.info(`Retry attempt ${attempt}...`);
         await delay(1000);
       } else {
         throw error;
