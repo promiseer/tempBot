@@ -1,6 +1,6 @@
 const axios = require("axios");
 const fs = require("fs");
-const { makeRequest } = require("../utils/pupeteer");
+const { makeRequest, delay } = require("../utils/pupeteer");
 const logger = require("../utils/logger");
 const {
   restoreLatestSros,
@@ -83,7 +83,6 @@ const getVillageDetails = async (hobliCode) => {
   }
 };
 
-
 const fetchKAVillageDistricts = async () => {
   const villageDistrictMapping = [];
 
@@ -121,6 +120,7 @@ const fetchKAVillageDistricts = async () => {
         }
       }
     }
+    return villageDistrictMapping;
   } catch (error) {
     console.error("Error getting zone data:", error);
   }
@@ -146,11 +146,7 @@ const fetchKASroDistricts = async () => {
         }));
         districtSroMapping.push(...districtData);
       } catch (error) {
-        console.error(
-          `Error fetching SRO for district ${district.drname}:`,
-          error
-        );
-      }
+        logger.error(`Error fetching SRO for district ${districtName}:`);      }
     })
   );
 
