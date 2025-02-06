@@ -506,7 +506,8 @@ const makeRequest = async (
       ) {
         attempt++;
         logger.info(`Retry attempt ${attempt}...`);
-        await delay(1000);
+        const delayTime = 1000 * Math.pow(2, attempt);
+        await delay(delayTime);
       } else {
         throw error;
       }
