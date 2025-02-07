@@ -481,7 +481,6 @@ const makeRequest = async (
   data = null,
   retries = 3
 ) => {
-  const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
   let attempt = 0;
 
@@ -509,6 +508,7 @@ const makeRequest = async (
         const delayTime = 1000 * Math.pow(2, attempt);
         await delay(delayTime);
       } else {
+        logger.error(`Axios Failed: ${error.message}`);
         throw error;
       }
     }

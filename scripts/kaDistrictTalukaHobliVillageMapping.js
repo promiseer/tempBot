@@ -17,7 +17,7 @@ const getDistrictsDetails = async () => {
       "post"
     );
 
-    return districtDetails.data;
+    return districtDetails.data || [];
   } catch (error) {
     throw error;
   }
@@ -49,7 +49,7 @@ const getTalukaDetails = async (districtCode) => {
       }
     );
 
-    return talukaDetails.data;
+    return talukaDetails.data || [];
   } catch (error) {
     throw error;
   }
@@ -63,7 +63,7 @@ const getHobliDetails = async (talukaCode) => {
       { talukaCode }
     );
 
-    return hobliDetails.data;
+    return hobliDetails.data || [];
   } catch (error) {
     throw error;
   }
@@ -77,7 +77,7 @@ const getVillageDetails = async (hobliCode) => {
       { hobliCode }
     );
 
-    return villageDetails.data;
+    return villageDetails.data || [];
   } catch (error) {
     throw error;
   }
@@ -146,7 +146,9 @@ const fetchKASroDistricts = async () => {
         }));
         districtSroMapping.push(...districtData);
       } catch (error) {
-        logger.error(`Error fetching SRO for district ${districtName}:`);      }
+        logger.error(`Error fetching SRO for district ${districtName}:`);
+      }
+      await delay(1000);
     })
   );
 
