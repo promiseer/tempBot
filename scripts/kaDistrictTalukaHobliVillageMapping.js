@@ -130,12 +130,13 @@ const fetchKASroDistricts = async () => {
   const districtSroMapping = [];
   const districts = await getDistrictsDetails();
 
-  await Promise.all(
-    districts.map(async (district) => {
-      const { districtCode, districtNamee: districtName } = district;
-      try {
-        const sros = await getSroDetails(districtCode);
-        const districtData = sros.map((sro) => ({
+  for (let district of districts) {
+    const { districtCode, districtNamee: districtName } = district;
+    try {
+      const sros = await getSroDetails(districtCode);
+
+      sros.forEach((sro) => {
+        districtSroMapping.push({
           tenant: "38784e96-6b31-4fa1-9072-648304b6b67d",
           code: "STATE.KARNATAKA",
           state: "KARNATAKA",
@@ -143,14 +144,12 @@ const fetchKASroDistricts = async () => {
           sroName: sro.sronamee,
           createdUser: "4cdfcf9b-0cc9-4c70-9686-22856d6ed01f",
           createdTenant: "0a2ab4d3-4070-4b5f-bcb0-9611a07e0c49",
-        }));
-        districtSroMapping.push(...districtData);
-      } catch (error) {
-        logger.error(`Error fetching SRO for district ${districtName}:`);
-      }
-      await delay(1000);
-    })
-  );
+        });
+      });
+    } catch (error) {
+      logger.error(`Error fetching SRO for district ${districtName}:`);
+    }
+  }
 
   return districtSroMapping;
 };
