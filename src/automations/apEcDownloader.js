@@ -82,7 +82,7 @@ const handleLogin = async (page, docNo, docYear, sroName) => {
     logger.info("Form submitted successfully!");
   } catch (error) {
     logger.error("Error during the process:", error);
-    throw error
+    throw error;
   }
 };
 
@@ -120,11 +120,12 @@ const searchByDocumentNumber = async (
     if (propertyData?.data?.propertyList?.length > 1) {
       for (let i = 0; i < propertyData.data.propertyList.length; i++) {
         const elementNo = i + 1;
-        // propertyData.data.propertyList[i].hno !== ",,"
-        // propertyData.data.propertyList[i].wardno &&
-        // propertyData.data.propertyList[i].blockno
-
-        if (propertyData.data.propertyList[i].sy1) {
+        if (
+          propertyData.data.propertyList[i].sy1 ||
+          propertyData.data.propertyList[i].hno !== ",," ||
+          propertyData.data.propertyList[i].wardno ||
+          propertyData.data.propertyList[i].blockno
+        ) {
           tasks.push(
             await handleMultipleProperty(
               page,
@@ -138,6 +139,9 @@ const searchByDocumentNumber = async (
               elementNo
             )
           );
+        } else {
+          tasks.push(dummyFilePath);
+          logger.info("property details not found");
         }
       }
 
