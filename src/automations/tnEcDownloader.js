@@ -1,6 +1,7 @@
 const logger = require("../../utils/logger");
 const { puppeteerInstance, clickButton } = require("../../utils/pupeteer");
 const { clickAndSearchEcDnos } = require("./tnDnosDownloader");
+const tnGetAvailableDates = require("./tnGetAvailableDates");
 const { clickAndSearchSnos } = require("./tnSnosDownloader");
 const moment = require("moment");
 /**
@@ -82,10 +83,38 @@ async function tnEcDownloader({
 
       switch (encumbranceType) {
         case "ENCUMBRANCE_TYPE.SNOS":
-          const endDate = moment().subtract(1, "days").format("DD-MMM-YYYY");
-          const ecStartDate = moment(startDate, "DD/MM/YYYY").format(
+          // Get available dates from the portal
+          const availableDates = await tnGetAvailableDates({
+            district,
+            sroName,
+            village,
+            zone,
+            browser,
+          });
+
+          // Parse the user-provided dates.
+          // startDate is provided as "DD/MM/YYYY" and we use moment().subtract(1, "days") for the user end date.
+          const userStart = moment(startDate, "DD/MM/YYYY");
+          const userEnd = moment().subtract(1, "days");
+
+          // Parse the available dates returned by tnGetAvailableDates (assumed to be in "DD-MMM-YYYY")
+          const availableStart = moment(
+            availableDates.startDate,
             "DD-MMM-YYYY"
           );
+          const availableEnd = moment(availableDates.endDate, "DD-MMM-YYYY");
+
+          // Compute the intersection of the two date ranges:
+          // Intersection start is the later of the two start dates.
+          // Intersection end is the earlier of the two end dates.
+          const intersectionStart = moment.max(userStart, availableStart);
+          const intersectionEnd = moment.min(userEnd, availableEnd);
+
+          // Format the intersection dates as "DD-MMM-YYYY"
+          const ecStartDate = intersectionStart.format("DD-MMM-YYYY");
+          const endDate = intersectionEnd.format("DD-MMM-YYYY");
+
+          // Pass the intersection dates into your downloader function.
           filePath = await clickAndSearchSnos(
             page,
             zone,
