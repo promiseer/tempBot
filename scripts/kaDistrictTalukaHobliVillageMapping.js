@@ -1,110 +1,176 @@
 const axios = require("axios");
 const fs = require("fs");
-const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+const { makeRequest, delay } = require("../utils/pupeteer");
+const logger = require("../utils/logger");
+const {
+  restoreLatestSros,
+  restoreLatestVillages,
+  insertLatestVillages,
+  insertLatestSro,
+  villageDistrictBackup,
+} = require("../src/services/nirnai.service");
 
-const postRequest = async (url, payload = null) => {
+const getDistrictsDetails = async () => {
   try {
-    const response = await axios.post(url, payload);
-    return response.data;
+    const districtDetails = await makeRequest(
+      `https://kaveri.karnataka.gov.in/api/GetDistrictAsync`,
+      "post"
+    );
+
+    return districtDetails.data || [];
   } catch (error) {
-    console.error("Error fetching data:", error);
-    return null;
+    throw error;
   }
 };
 
-const getDistrictsDetails = async (zoneId) => {
-  const districtDetails = await postRequest(
-    `https://kaveri.karnataka.gov.in/api/GetDistrictAsync`
-  );
+const getSroDetails = async (districtcode) => {
+  try {
+    const sroDetails = await makeRequest(
+      `https://kaveri.karnataka.gov.in/api/GetSroDistrict`,
+      "post",
+      {},
+      { districtcode }
+    );
 
-  return districtDetails;
+    return sroDetails.data;
+  } catch (error) {
+    throw error;
+  }
 };
-const getTalukaDetails = async (districtCode) => {
-  const districtDetails = await postRequest(
-    `https://kaveri.karnataka.gov.in/api/GetTalukaAsync`,
-    {
-      districtCode,
-    }
-  );
 
-  return districtDetails;
+const getTalukaDetails = async (districtCode) => {
+  try {
+    const talukaDetails = await makeRequest(
+      `https://kaveri.karnataka.gov.in/api/GetTalukaAsync`,
+      "post",
+      {},
+      {
+        districtCode,
+      }
+    );
+
+    return talukaDetails.data || [];
+  } catch (error) {
+    throw error;
+  }
 };
 const getHobliDetails = async (talukaCode) => {
-  const hobliDetails = await postRequest(
-    `https://kaveri.karnataka.gov.in/api/GetHobliAsync`,
-    { talukaCode }
-  );
+  try {
+    const hobliDetails = await makeRequest(
+      `https://kaveri.karnataka.gov.in/api/GetHobliAsync`,
+      "post",
+      {},
+      { talukaCode }
+    );
 
-  return hobliDetails;
+    return hobliDetails.data || [];
+  } catch (error) {
+    throw error;
+  }
 };
 const getVillageDetails = async (hobliCode) => {
-  const villageDetails = await postRequest(
-    `https://kaveri.karnataka.gov.in/api/GetVillageAsync`,
-    { hobliCode }
-  );
+  try {
+    const villageDetails = await makeRequest(
+      `https://kaveri.karnataka.gov.in/api/GetVillageAsync`,
+      "post",
+      {},
+      { hobliCode }
+    );
 
-  return villageDetails;
+    return villageDetails.data || [];
+  } catch (error) {
+    throw error;
+  }
 };
 
-const getZoneData = async () => {
-  const allZoneData = [];
+const fetchKAVillageDistricts = async () => {
+  const villageDistrictMapping = [];
 
-  // Fetch all districts
-  const districts = await getDistrictsDetails();
-  for (let district of districts) {
-    const districtCode = district.districtCode;
-    const districtName = district.districtNamee;
+  try {
+    // Fetch all districts
+    const districts = await getDistrictsDetails();
+    for (let district of districts) {
+      const { districtCode: districtCode, districtNamee: districtName } =
+        district;
 
-    // Fetch talukas for the district
-    const talukas = await getTalukaDetails(districtCode);
-    const talukaData = [];
+      // Fetch talukas for the district
+      const talukas = await getTalukaDetails(districtCode);
 
-    for (let taluka of talukas) {
-      const talukaCode = taluka.talukCode;
-      const talukaName = taluka.talukNamee;
+      for (let taluka of talukas) {
+        const { talukCode: talukaCode, talukNamee: talukaName } = taluka;
 
-      const hoblis = await getHobliDetails(talukaCode);
+        const hoblis = await getHobliDetails(talukaCode);
+        for (let hobli of hoblis) {
+          const { hoblicode: hobliCode, hoblinamee: hobliName } = hobli;
+          const villages = await getVillageDetails(hobliCode);
 
-      const hobliData = [];
-
-      for (let hobli of hoblis) {
-        const hobliCode = hobli.hoblicode;
-        const hobliName = hobli.hoblinamee;
-        const villages = await getVillageDetails(hobliCode);
-        const villageData = villages.map((village) => village.villagenamee);
-
-        hobliData.push({
-          hobliName,
-          villages: villageData,
-        });
-        await delay(1000);
+          villages.forEach((village) => {
+            villageDistrictMapping.push({
+              state: "KARNATAKA",
+              district: districtName,
+              mandal: talukaName,
+              village: village.villagenamee,
+              sroName: null,
+              zone: null,
+              town: hobliName,
+              createdUser: "4cdfcf9b-0cc9-4c70-9686-22856d6ed01f",
+              createdTenant: "0a2ab4d3-4070-4b5f-bcb0-9611a07e0c49",
+            });
+          });
+        }
       }
-
-      talukaData.push({
-        talukaName,
-        hoblis: hobliData,
-      });
-      await delay(1000);
     }
+    return villageDistrictMapping;
+  } catch (error) {
+    console.error("Error getting zone data:", error);
+  }
+};
 
-    allZoneData.push({
-      districtName,
-      talukas: talukaData,
-    });
-    console.log(allZoneData);
+const fetchKASroDistricts = async () => {
+  const districtSroMapping = [];
+  const districts = await getDistrictsDetails();
 
-    await delay(1000);
+  for (let district of districts) {
+    const { districtCode, districtNamee: districtName } = district;
+    try {
+      const sros = await getSroDetails(districtCode);
+
+      sros.forEach((sro) => {
+        districtSroMapping.push({
+          tenant: "38784e96-6b31-4fa1-9072-648304b6b67d",
+          code: "STATE.KARNATAKA",
+          state: "KARNATAKA",
+          district: districtName,
+          sroName: sro.sronamee,
+          createdUser: "4cdfcf9b-0cc9-4c70-9686-22856d6ed01f",
+          createdTenant: "0a2ab4d3-4070-4b5f-bcb0-9611a07e0c49",
+        });
+      });
+    } catch (error) {
+      logger.error(`Error fetching SRO for district ${districtName}:`);
+    }
   }
 
-  // Write the final mapped data to a JSON file
-  fs.writeFileSync(
-    "kaDistrictTalukaHobliVillageMapping.json",
-    JSON.stringify(allZoneData, null, 2)
-  );
-  console.log(
-    "Data successfully written to district_taluka_hobli_village_mapping.json"
-  );
+  return districtSroMapping;
 };
 
-// Execute the main function
-getZoneData();
+const kaProcedure = async () => {
+  let state = "KARNATAKA";
+  try {
+    kaVillageMandalData = await fetchKAVillageDistricts();
+    kaSroDistrictsData = await fetchKASroDistricts();
+
+    await villageDistrictBackup({ state }); //backupResponse
+    logger.info("KA backup done successfully!");
+    await insertLatestSro(kaSroDistrictsData); //insert latest data
+    logger.info("KA SroMaster data updated successfully!");
+    await insertLatestVillages(kaVillageMandalData); //insert latest data
+    logger.info("KA Village data updated successfully!");
+  } catch (error) {
+    logger.error(`Error occured: ${error.message}`);
+    await restoreLatestSros({ state }); //rollback
+    await restoreLatestVillages({ state }); //rollback
+  }
+};
+
+kaProcedure();

@@ -11,10 +11,13 @@ const enumerateErrorFormat = winston.format((info) => {
 const logger = winston.createLogger({
   level: process.env.NODE_ENV === "dev" ? "debug" : "info",
   format: winston.format.combine(
+    winston.format.timestamp(),
     enumerateErrorFormat(),
     winston.format.colorize(),
     winston.format.splat(),
-    winston.format.printf(({ level, message }) => `${level}: ${message}`)
+    winston.format.printf(({ timestamp, level, message }) => {
+      return `${level}: ${timestamp}: ${message}`;
+    })
   ),
   transports: [
     new winston.transports.Console({

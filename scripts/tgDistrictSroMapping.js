@@ -45,6 +45,7 @@ const {
   villageDistrictBackup,
   insertLatestSro,
   restoreLatestSros,
+  restoreLatestVillages,
 } = require("../src/services/nirnai.service");
 
 const districtSroMapping = [];
@@ -90,18 +91,23 @@ const fetchTgSroDistricts = async () => {
 const tgProcedure = async () => {
   let state = "TELANGANA";
   try {
-    tgVillageMandalData = await fetchTgVillageMandal();
-    tgSroDistrictsData = await fetchTgSroDistricts();
+    // tgVillageMandalData = await fetchTgVillageMandal();
+    // tgSroDistrictsData = await fetchTgSroDistricts();
 
-    await villageDistrictBackup({ state }); //backupResponse
-    logger.info("TG backup done successfully!");
-    await insertLatestSro(tgSroDistrictsData); //insert latest data
-    await insertLatestVillages(tgVillageMandalData); //insert latest data
-    logger.info("TG sro data updated successfully!");
+    // await villageDistrictBackup({ state }); //backupResponse
+    // logger.info("TG backup done successfully!");
+    // await insertLatestSro(tgSroDistrictsData); //insert latest data
+    // await insertLatestVillages(tgVillageMandalData); //insert latest data
+    // logger.info("TG sro data updated successfully!");
+
+    // await restoreLatestSros({ state }); //rollback
+    await restoreLatestVillages({ state }); //rollback
   } catch (error) {
+    console.log(error);
+    
     logger.error(`Error occured: ${error.message}`);
-    await restoreLatestSros({ state }); //rollback
-    await restoreLatestSros({ state }); //rollback
+  //   await restoreLatestSros({ state }); //rollback
+  //   await restoreLatestVillages({ state }); //rollback
   }
 };
 
