@@ -4,7 +4,7 @@ const { uploadFileGC } = require("../../utils/googleBucketUtils");
 const logger = require("../../utils/logger");
 const apEcDownloader = require("../automations/apEcDownloader");
 const { tgEcDownloader } = require("../automations/tgEcDownloader");
-const tnEcDowloader = require("../automations/tnEcDownloader");
+const tnEcDownloader = require("../automations/tnEcDownloader");
 const kaEcDownloader = require("../automations/kaEcDownloader");
 const {
   createAttachement,
@@ -80,34 +80,36 @@ const processJob = async (job) => {
 
       case "TAMIL NADU":
         try {
-          const filePath = await tnEcDowloader(data);
-          if (filePath) {
-            const file = await uploadFileGC(fileDestination, filePath);
-            logger.info(`Saving Internal Document`);
-            await createAttachement(
-              caseId,
-              file,
-              data.sroName,
-              encumbranceType,
-              data,
-              "DOCUMENT_CATEGORY.INTERNAL_DOCUMENTS",
-              "DOCUMENT_TYPE.ENCUMBRANCE_DOWNLOAD"
-            );
-            await deleteFile(filePath);
-            logger.info(`Converting tamil ec`);
-            const convertedPath = await convertTamilEC(
-              file,
-              fileDestination,
-              startDate,
-              caseId
-            );
-            await createAttachement(
-              caseId,
-              convertedPath,
-              data.sroName,
-              encumbranceType,
-              data
-            );
+          const filePaths = await tnEcDownloader(data);
+          if (filePaths && filePaths.length) {
+            for (const filePath of filePaths) {
+              const file = await uploadFileGC(fileDestination, filePath);
+              logger.info(`Saving Internal Document`);
+              await createAttachement(
+                caseId,
+                file,
+                data.sroName,
+                encumbranceType,
+                data,
+                "DOCUMENT_CATEGORY.INTERNAL_DOCUMENTS",
+                "DOCUMENT_TYPE.ENCUMBRANCE_DOWNLOAD"
+              );
+              await deleteFile(filePath);
+              logger.info(`Converting tamil ec`);
+              const convertedPath = await convertTamilEC(
+                file,
+                fileDestination,
+                startDate,
+                caseId
+              );
+              await createAttachement(
+                caseId,
+                convertedPath,
+                data.sroName,
+                encumbranceType,
+                data
+              );
+            }
             logger.info(`Successfully processed TN-EC with Job ID:${id}`);
           }
         } catch (error) {
