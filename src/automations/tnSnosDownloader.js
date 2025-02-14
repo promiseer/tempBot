@@ -1,7 +1,6 @@
 const fs = require("fs");
 const logger = require("../../utils/logger");
 const { clickButton } = require("../../utils/pupeteer");
-
 const {
   selectDropdownOption,
   handleCaptcha,
@@ -9,18 +8,8 @@ const {
 } = require("../../utils/tnutils");
 
 /**
- * Clicks "Search/View EC" on the page, fills out the form for YEAR_WISE mode,
- * solves the captcha, and attempts to download the PDF.
- * @param {import("puppeteer").Page} page - The Puppeteer page object.
- * @param {string} zone - Zone name for the dropdown.
- * @param {string} district - District name for the dropdown.
- * @param {string} sro - SRO name for the dropdown.
- * @param {string} startDate - Start date in DD/MM/YYYY format.
- * @param {string} endDate - End date in DD/MM/YYYY format.
- * @param {string} village - Village name for the dropdown.
- * @param {string} surveyNo - Survey number.
- * @returns {Promise<string|null>} - The path to the downloaded file, or null if not found.
- * @throws Will throw an error if any step fails.
+ * Performs a Survey-wise (SNOS) search in the "Search/View EC" form.
+ * Fills the form once, then retries captcha up to 5 times if #incCaptcha has text.
  */
 async function clickAndSearchSnos(
   page,
@@ -32,157 +21,215 @@ async function clickAndSearchSnos(
   village,
   surveyNo
 ) {
-  let captchaImagePath;
-  try {
-    // 2. Fill in the form fields
-    await selectDropdownOption(page, "#cmb_Zone", zone);
-    // Wait for district dropdown to populate and select
-    await page.waitForFunction(
-      () => document.querySelector("#cmb_District").options.length > 1,
-      { timeout: 60000 }
-    );
-    await selectDropdownOption(page, "#cmb_District", district);
-    await page.waitForFunction(
-      () => document.querySelector("#cmb_SroName").options.length > 1,
-      { timeout: 60000 }
-    );
-    await selectDropdownOption(page, "#cmb_SroName", sro);
-    await page.evaluate(
-      (startDate, endDate) => {
-        document.querySelector("#txt_PeriodStartDt").value = startDate;
-        document.querySelector("#txt_PeriodEndDt").value = endDate;
-      },
-      startDate,
-      endDate
-    );
+  logger.info("Filling SNOS form...");
 
-    await page.waitForFunction(
-      () => document.querySelector("#cmb_Village").options.length > 1,
-      { timeout: 60000 }
-    );
-    await selectDropdownOption(page, "#cmb_Village", village);
-    await page.type("#txt_SurveyNo", surveyNo.split("/")[0]);
+  // 1) Fill the form only once
+  await selectDropdownOption(page, "#cmb_Zone", zone);
 
-    logger.info("Form filled successfully.");
+  await page.waitForFunction(
+    () => document.querySelector("#cmb_District")?.options?.length > 1,
+    { timeout: 60000 }
+  );
+  await selectDropdownOption(page, "#cmb_District", district);
 
-    // 3. Click 'Add Survey' button
-    await clickButton(page, "#btn_AddSurvey");
-    logger.info(
-      "Clicked the 'Add Survey' button; waiting for table to appear..."
-    );
+  await page.waitForFunction(
+    () => document.querySelector("#cmb_SroName")?.options?.length > 1,
+    { timeout: 60000 }
+  );
+  await selectDropdownOption(page, "#cmb_SroName", sro);
 
-    // 4. Wait for the table to appear
-    await page.waitForSelector("#multiAddSurvey", { timeout: 60000 });
-    logger.info("Table with ID 'multiAddSurvey' appeared.");
+  // Set date
+  await page.evaluate(
+    (s, e) => {
+      document.querySelector("#txt_PeriodStartDt").value = s;
+      document.querySelector("#txt_PeriodEndDt").value = e;
+    },
+    startDate,
+    endDate
+  );
 
-    // 5. Handle captcha
-    captchaImagePath = await handleCaptcha(page);
+  await page.waitForFunction(
+    () => document.querySelector("#cmb_Village")?.options?.length > 1,
+    { timeout: 60000 }
+  );
+  await selectDropdownOption(page, "#cmb_Village", village);
 
-    // 6. Click 'Search Document' button
-    await clickButton(page, "#btn_SearchDoc");
-    logger.info("Clicked the 'Search Document' button; waiting for results...");
+  const [mainSurvey] = surveyNo.split("/");
+  await page.type("#txt_SurveyNo", mainSurvey);
 
+  logger.info("Clicking 'Add Survey'...");
+  await clickButton(page, "#btn_AddSurvey");
+
+  logger.info("Waiting for #multiAddSurvey to confirm addition...");
+  await page.waitForSelector("#multiAddSurvey", { timeout: 60000 });
+
+  // 2) Up to 5 attempts for invalid captcha
+  const maxCaptchaAttempts = 5;
+  for (let attempt = 1; attempt <= maxCaptchaAttempts; attempt++) {
+    let captchaImagePath = null;
     try {
-      // 7. Wait for either the "Click here" link, the "No Documents registered" message, or the "Too many schedules" message
-      await Promise.race([
-        page.waitForSelector('a[target="_blank"] span[style*="color: red"]', {
-          timeout: 60000,
-        }),
-        page.waitForFunction(
-          () =>
-            document.body.innerText.includes(
-              "Number of Schedules for provided search criteria is more than 200."
-            ) ||
-            document.body.innerText.includes(
-              "No Documents registered during the Search Period"
-            ),
-          { timeout: 60000 }
-        ),
-      ]);
+      logger.info(`SNOS attempt ${attempt} of ${maxCaptchaAttempts}...`);
 
-      // Check if the "No Documents registered during the Search Period" message is present
-      const isNoDocuments = await page.evaluate(() =>
-        document.body.innerText.includes(
-          "No Documents registered during the Search Period"
-        )
-      );
-
-      if (isNoDocuments) {
-        throw new Error("No Documents registered during the Search Period.");
-      }
-
-      // Check if the "Too many schedules" message is present
-      const isTooManySchedules = await page.evaluate(() =>
-        document.body.innerText.includes(
-          "Number of Schedules for provided search criteria is more than 200."
-        )
-      );
-
-      if (isTooManySchedules) {
-        throw new Error(
-          "Too many schedules. Please provide the email address, and the EC PDF will be sent to the same."
+      // Wait for #txt_Captcha if it exists
+      const captchaSelector = "#txt_Captcha";
+      const hasCaptcha = await page.$(captchaSelector);
+      if (hasCaptcha) {
+        await page.waitForSelector(captchaSelector, { timeout: 15000 });
+        captchaImagePath = await handleCaptcha(page);
+      } else {
+        logger.info(
+          "Captcha field not found; proceeding without captcha solve."
         );
       }
 
-      logger.info("'Click here' link appeared.");
-    } catch (error) {
-      if (
-        error.message.includes("Too many schedules") ||
-        error.message.includes(
-          "No Documents registered during the Search Period"
-        ) ||
-        error.message.includes("timeout")
-      ) {
-        logger.error(error.message);
+      // Click "SearchDoc"
+      await clickButton(page, "#btn_SearchDoc");
+      logger.info("Clicked 'Search Document'; waiting for outcome...");
+
+      /**
+       * Race among:
+       * 1) PDF link => "pdf"
+       * 2) #incCaptcha is visible with any non-empty text => "invalidCaptcha"
+       * 3) "No Documents" => "noDocs"
+       * 4) "Too many schedules" => "tooMany"
+       */
+      const outcome = await Promise.race([
+        // If we see the PDF link first:
+        page
+          .waitForSelector('a[target="_blank"] span[style*="color: red"]', {
+            timeout: 60000,
+          })
+          .then(() => "pdf"),
+
+        // If #incCaptcha is visible + has non-empty text:
+        page
+          .waitForFunction(
+            () => {
+              const el = document.querySelector("#incCaptcha");
+              if (!el) return false;
+              const visible = el.style.visibility === "visible";
+              const textNonEmpty = el.innerText.trim().length >= 1;
+              return visible && textNonEmpty;
+            },
+            { timeout: 60000 }
+          )
+          .then(() => "invalidCaptcha"),
+
+        // If we see "No Documents registered..."
+        page
+          .waitForFunction(
+            () =>
+              document.body.innerText.includes(
+                "No Documents registered during the Search Period"
+              ),
+            { timeout: 60000 }
+          )
+          .then(() => "noDocs"),
+
+        // If we see "Number of Schedules..." => too many schedules
+        page
+          .waitForFunction(
+            () =>
+              document.body.innerText.includes(
+                "Number of Schedules for provided search criteria is more than 200."
+              ),
+            { timeout: 60000 }
+          )
+          .then(() => "tooMany"),
+      ]);
+
+      logger.info(`SNOS outcome from race: ${outcome}`);
+
+      if (outcome === "invalidCaptcha") {
+        logger.warn(
+          `SNOS attempt ${attempt} => #incCaptcha has some text => invalid captcha.`
+        );
+        // Cleanup captcha image
+        if (captchaImagePath) {
+          try {
+            fs.unlinkSync(captchaImagePath);
+          } catch (err) {
+            logger.error(`Failed to remove captcha image: ${err.message}`);
+          }
+        }
+        if (attempt < maxCaptchaAttempts) {
+          // Retry the loop
+          continue;
+        }
+        throw new Error("Exceeded SNOS captcha attempts (5).");
+      } else if (outcome === "noDocs") {
+        logger.warn("No Documents found in this SNOS search range.");
+        if (captchaImagePath) {
+          fs.unlinkSync(captchaImagePath);
+        }
+        return null;
+      } else if (outcome === "tooMany") {
+        throw new Error(
+          "Too many schedules. Portal suggests using email approach."
+        );
+      } else if (outcome === "pdf") {
+        // PDF link is present, let's retrieve it
+        logger.info("Found a 'Click here' PDF link; extracting...");
+        const pdfLinkHref = await page.evaluate(() => {
+          const spans = Array.from(
+            document.querySelectorAll(
+              'a[target="_blank"] span[style*="color: red"]'
+            )
+          );
+          const span = spans.find((el) =>
+            el.textContent.includes("Click here")
+          );
+          return span && span.parentElement
+            ? span.parentElement.getAttribute("href")
+            : null;
+        });
+        if (!pdfLinkHref) {
+          throw new Error(
+            "SNOS: Could not find actual PDF link after success indicator."
+          );
+        }
+
+        const pdfUrl = new URL(pdfLinkHref, page.url()).href;
+        logger.info(`Downloading SNOS PDF => ${pdfUrl}`);
+
+        const fileName = `tn-encumbrance-certificate-snos-${Date.now()}`;
+        const filePath = await savePdfToFile(pdfUrl, fileName);
+        logger.info(`SNOS PDF saved: ${filePath}`);
+
+        // Cleanup captcha
+        if (captchaImagePath) {
+          try {
+            fs.unlinkSync(captchaImagePath);
+            logger.info(`Deleted captcha image: ${captchaImagePath}`);
+          } catch (delErr) {
+            logger.error(`Failed to delete captcha image: ${delErr.message}`);
+          }
+        }
+        return filePath;
       }
-      throw error;
+    } catch (err) {
+      logger.error(`SNOS attempt ${attempt} error: ${err.message}`);
+      if (captchaImagePath) {
+        try {
+          fs.unlinkSync(captchaImagePath);
+        } catch (delErr) {
+          logger.error(`Failed to remove captcha image: ${delErr.message}`);
+        }
+      }
+      // If fatal, throw
+      if (
+        err.message.includes("Exceeded SNOS captcha attempts") ||
+        err.message.includes("Portal suggests using email approach") ||
+        err.message.includes("Could not find actual PDF link")
+      ) {
+        throw err;
+      }
+      // Re-throw everything else
+      throw err;
     }
-
-    // Cleanup captcha image
-    if (captchaImagePath) {
-      fs.unlink(captchaImagePath, (err) => {
-        if (err) logger.error(`Failed to delete captcha image: ${err.message}`);
-        else logger.info(`Deleted captcha image: ${captchaImagePath}`);
-      });
-    }
-
-    // 8. Get the PDF URL
-    const pdfLinkHref = await page.evaluate(() => {
-      const spans = Array.from(
-        document.querySelectorAll(
-          'a[target="_blank"] span[style*="color: red"]'
-        )
-      );
-      const span = spans.find((el) => el.textContent.includes("Click here"));
-      return span && span.parentElement
-        ? span.parentElement.getAttribute("href")
-        : null;
-    });
-
-    if (!pdfLinkHref) {
-      throw new Error("PDF download link not found.");
-    }
-
-    const pdfUrl = new URL(pdfLinkHref, page.url()).href;
-    logger.info(`Constructed PDF URL: ${pdfUrl}`);
-
-    // 9. Download and save the PDF
-    const filePath = await savePdfToFile(pdfUrl, "tn-encumbrance-certificate");
-    return filePath;
-  } catch (error) {
-    logger.error("Error in clickAndSearchSnos function.");
-    logger.error(`Message: ${error.message}`);
-    logger.error(`Stack: ${error.stack}`);
-
-    // Attempt to delete the captcha image if we have it
-    if (captchaImagePath) {
-      fs.unlink(captchaImagePath, (err) => {
-        if (err) logger.error(`Failed to delete captcha image: ${err.message}`);
-        else logger.info(`Deleted captcha image: ${captchaImagePath}`);
-      });
-    }
-    throw error;
   }
+
+  throw new Error("SNOS loop ended without success or final error.");
 }
 
 module.exports = { clickAndSearchSnos };
