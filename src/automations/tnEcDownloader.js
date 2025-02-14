@@ -28,7 +28,7 @@ async function tnEcDownloader({
 
   const browser = await puppeteerInstance();
   const page = await browser.newPage();
-  let filePath = null;
+  let filePaths = [];
 
   try {
     // 1. Go to Tamil Nadu registration portal
@@ -110,24 +110,42 @@ async function tnEcDownloader({
           const intersectionStart = moment.max(userStart, availableStart);
           const intersectionEnd = moment.min(userEnd, availableEnd);
 
-          // Format the intersection dates as "DD-MMM-YYYY"
-          const ecStartDate = intersectionStart.format("DD-MMM-YYYY");
-          const endDate = intersectionEnd.format("DD-MMM-YYYY");
+          let chunkStart = intersectionStart.clone();
 
-          // Pass the intersection dates into your downloader function.
-          filePath = await clickAndSearchSnos(
-            page,
-            zone,
-            district,
-            sroName,
-            ecStartDate,
-            endDate,
-            village,
-            surveyNo
-          );
+          // Loop over the intersection range in 5-year chunks
+          while (chunkStart.isSameOrBefore(intersectionEnd)) {
+            const chunkEnd = moment.min(
+              chunkStart.clone().add(5, "years").subtract(1, "days"),
+              intersectionEnd
+            );
+
+            // Format the chunk's start and end dates as required
+            const ecStartDate = chunkStart.format("DD-MMM-YYYY");
+            const ecEndDate = chunkEnd.format("DD-MMM-YYYY");
+
+            // Call the downloader for this chunk
+            const filePathChunk = await clickAndSearchSnos(
+              page,
+              zone,
+              district,
+              sroName,
+              ecStartDate,
+              ecEndDate,
+              village,
+              surveyNo
+            );
+
+            filePaths.push(filePathChunk);
+
+            // Move to the next chunk (start the day after the current chunk's end)
+            chunkStart = chunkEnd.clone().add(1, "days");
+          }
+
           break;
         case "ENCUMBRANCE_TYPE.DNOS":
-          filePath = await clickAndSearchEcDnos(page, sroName, docNo, docYear);
+          filePaths = [
+            await clickAndSearchEcDnos(page, sroName, docNo, docYear),
+          ];
           break;
         default:
           throw new Error(`Invalid Encumbrance Type: ${encumbranceType}`);
@@ -146,7 +164,7 @@ async function tnEcDownloader({
     await browser.close();
   }
 
-  return filePath;
+  return filePaths;
 }
 
 module.exports = tnEcDownloader;
