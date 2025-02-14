@@ -3,9 +3,11 @@ const {
   villageDistrictBackup,
   insertLatestSro,
   restoreLatestSros,
+  insertLatestVillages,
+  restoreLatestVillages,
 } = require("../src/services/nirnai.service");
 const logger = require("../utils/logger");
-
+const fetchApMandalVillage = require("./apMandalVillageMapping");
 const districts = [
   {
     id: "TUQvTmYvTXc9PQ==",
@@ -182,14 +184,17 @@ const fetchApSroDistricts = async () => {
 const apProcedure = async () => {
   let state = "ANDHRA PRADESH";
   try {
-    apData = await fetchApSroDistricts();
+    const apSroData = await fetchApSroDistricts();
+    const apVillageData = await fetchApMandalVillage();
     const backupResponse = await villageDistrictBackup({ state }); //backupResponse
     logger.info("AP backup done successfully!");
-    const insertResponse = await insertLatestSro(apData); //insert latest data
+    const insertSroResponse = await insertLatestSro(apSroData); //insert latest data
+    const insertVillageResponse = await insertLatestVillages(apVillageData); //insert latest data
     logger.info("AP sro data updated successfully!");
   } catch (error) {
     logger.error(`Error occured: ${error.message}`);
     await restoreLatestSros({ state }); //rollback
+    await restoreLatestVillages({ state }); //rollback
   }
 };
 
