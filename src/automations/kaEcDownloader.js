@@ -51,36 +51,6 @@ const getAndFillOtp = async (page) => {
   await page.type("#otp", otp);
 
   logger.info("Filled OTP:", otp);
-};
-
-const handleDialog = async (page) => {
-  new Promise((resolve) => {
-    page.on("dialog", async (dialog) => {
-      logger.info("Dialog message: " + dialog.message());
-      logger.info("Popup detected, re-logging in...");
-
-      await dialog.accept(); // Accept the dialog
-      await delay(1000);
-      await login(page); // Re-login after accepting the dialog
-
-      resolve(); // Resolve the promise once the dialog handling is complete
-    });
-  });
-};
-async function kaEc() {
-  const browser = await puppeteerInstance();
-  let page = await browser.newPage();
-  await page.goto("https://kaveri.karnataka.gov.in/landing-page", {
-    waitUntil: "load",
-    timeout: 0,
-  });
-
-  // Start the login process
-  await login(page);
-  logger.info("Login completed.");
-  await handleDialog(page);
-  await delay(2000);
-  await getAndFillOtp(page);
   await delay(2000);
 
   await clickButton(
@@ -132,83 +102,202 @@ async function kaEc() {
       logger.info("Invalid OTP element not found, skipping.");
     }
   }
+};
 
+const fillAggriForm = async (page, surveyNo) => {
   await clickButton(
     page,
-    "body > div:nth-child(1) > app-root > div > div > app-kaveri-dashboard > div > div.animated.fadeIn.mt-3.ng-tns-c140-2 > div > div.row.p-2.ng-tns-c140-2 > div.col-md-4.d-flex.align-items-center.justify-content-center.ng-tns-c140-2 > div > button"
-  );
-  await delay(1000);
-
-  await clickButton(
-    page,
-    "body > div:nth-child(1) > app-root > div > div > app-kaveri-dashboard > div > div.applicationTypeOverlay.ng-tns-c140-2.ng-star-inserted > div > app-application-type > div > div > div.card-body > div.row.mt-4 > div:nth-child(2) > img"
+    "body > div:nth-child(1) > app-root > div > div > app-ec-search-citizen > div > div.containe-lg > div > div > form > div:nth-child(4) > div.row > div:nth-child(1) > label"
   );
 
-  await delay(1000);
+  logger.info("clicked on aggri");
+  await fillInput(page, 'input[name="surveynumber"]', surveyNo);
+};
 
-  await clickButton(
-    page,
-    "#mat-dialog-0 > app-perquisite > mat-dialog-actions > button"
-  );
-  await delay(1000);
-
-  await clickButton(
-    page,
-    "#mat-dialog-0 > app-perquisite > div.overlay.ng-star-inserted > div > div > div.card-body > div:nth-child(2) > button.btn.btn-primary"
-  );
-  await delay(1000);
-  logger.info("selecting District");
-  await selectOption(page, 'select[name="district"]', "Basavanagudi");
-  await delay(1000);
-  logger.info("selecting taluka");
-  await selectOption(page, 'select[name="taluka"]', "Kengeri");
-  await delay(1000);
-  logger.info("selecting taluka");
-
-  await selectOption(page, 'select[name="hobli"]', "Uttara Halli Hobli 4");
-  await delay(1000);
-
-  await selectOption(page, 'select[name="village"]', "Thurahalli");
-
+const fillNonAggriForm = async (page, propertyTypes, propertyNumber) => {
   await clickButton(
     page,
     "body > div:nth-child(1) > app-root > div > div > app-ec-search-citizen > div > div.containe-lg > div > div > form > div:nth-child(4) > div.row > div:nth-child(2) > label"
   );
+  logger.info("clicked on non aggri");
 
-  await selectOption(page, 'select[name="_currentproperttypeid"]', "Flat No");
+  for (let index = 0; index < propertyTypes.length; index++) {
+    const propertyType = propertyTypes[index];
+    const selector =
+      index === 0
+        ? 'select[name="_currentproperttypeid"]'
+        : "body > div:nth-child(1) > app-root > div > div > app-ec-search-citizen > div > div.containe-lg > div > div > form > div:nth-child(4) > div:nth-child(4) > div > table > tr:nth-child(3) > td:nth-child(1) > select";
+    await delay(1000);
+    await selectOption(page, selector, propertyType);
 
-  await fillInput(page, 'input[name="_currentnumber"]', "0401");
+    logger.info(`selected property Type: ${propertyType} :: ${propertyNumber}`);
+    await delay(1000);
+    await fillInput(
+      page,
+      `body > div:nth-child(1) > app-root > div > div > app-ec-search-citizen > div > div.containe-lg > div > div > form > div:nth-child(4) > div:nth-child(4) > div > table > tr:nth-child(${
+        index + 2
+      }) > td:nth-child(2) > input`,
+      propertyNumber
+    );
+    await delay(1000);
+    if (propertyTypes[index + 1]) {
+      await clickButton(
+        page,
+        `body > div:nth-child(1) > app-root > div > div > app-ec-search-citizen > div > div.containe-lg > div > div > form > div:nth-child(4) > div:nth-child(4) > div > table > tr:nth-child(${
+          index + 3
+        }) > th > button`
+      );
+    }
+  }
+};
 
-  // await fillInput(page, 'input[name="surveynumber"]', "123");
-  await page.$eval('input[name="fromdate"]', (input) => {
-    input.value = "01/01/2004"; // Set the desired date here
-    input.dispatchEvent(new Event("input", { bubbles: true })); // Trigger the input event
-    input.dispatchEvent(new Event("change", { bubbles: true })); // Trigger the change event
-    input.removeAttribute("required");
-  });
-
-  await page.$eval('input[name="todate"]', (input) => {
-    input.value = "01/01/2024"; // Set the desired date here
-    input.dispatchEvent(new Event("input", { bubbles: true })); // Trigger the input event
-    input.dispatchEvent(new Event("change", { bubbles: true })); // Trigger the change event
-    input.removeAttribute("required");
-  });
-
-  await delay(1000);
-
-  await clickButton(
-    page,
-    "body > div:nth-child(1) > app-root > div > div > app-ec-search-citizen > div > div.containe-lg > div > div > form > div.mt-3.text-center > button.mat-tooltip-trigger.btn.btn-primary.mr-1.ng-star-inserted"
+const fillDate = async (page, selector, date) => {
+  await page.$eval(
+    selector,
+    (input, date) => {
+      input.value = date; // Set the desired date here
+      input.dispatchEvent(new Event("input", { bubbles: true })); // Trigger the input event
+      input.dispatchEvent(new Event("change", { bubbles: true })); // Trigger the change event
+      input.removeAttribute("required");
+    },
+    date
   );
+};
 
-  const filePath = await generatePDF(
-    page,
-    "#PdfData > table",
-    `public/Downloads/${"docNoIdentifier"}`,
-    true
-  );
+const handleDialog = async (page) => {
+  new Promise((resolve) => {
+    page.on("dialog", async (dialog) => {
+      logger.info("Dialog message: " + dialog.message());
+      logger.info("Popup detected, re-logging in...");
 
-  return filePath;
+      await dialog.accept(); // Accept the dialog
+      await delay(1000);
+      await login(page); // Re-login after accepting the dialog
+
+      resolve(); // Resolve the promise once the dialog handling is complete
+    });
+  });
+};
+async function kaEc({
+  houseNo,
+  surveyNo,
+  village,
+  ward,
+  block,
+  district,
+  encumbranceType,
+  startDate,
+  endDate,
+  plotNo,
+  flatNo,
+  taluk,
+  town,
+}) {
+  try {
+    const browser = await puppeteerInstance();
+    let page = await browser.newPage();
+    await page.goto("https://kaveri.karnataka.gov.in/landing-page", {
+      waitUntil: "load",
+      timeout: 0,
+    });
+
+    // Start the login process
+    await login(page);
+    logger.info("Login completed.");
+    await handleDialog(page);
+    await delay(2000);
+    await getAndFillOtp(page);
+
+    await clickButton(
+      page,
+      "body > div:nth-child(1) > app-root > div > div > app-kaveri-dashboard > div > div.animated.fadeIn.mt-3.ng-tns-c140-2 > div > div.row.p-2.ng-tns-c140-2 > div.col-md-4.d-flex.align-items-center.justify-content-center.ng-tns-c140-2 > div > button"
+    );
+    await delay(1000);
+
+    await clickButton(
+      page,
+      "body > div:nth-child(1) > app-root > div > div > app-kaveri-dashboard > div > div.applicationTypeOverlay.ng-tns-c140-2.ng-star-inserted > div > app-application-type > div > div > div.card-body > div.row.mt-4 > div:nth-child(2) > img"
+    );
+
+    await delay(1000);
+
+    await clickButton(
+      page,
+      "#mat-dialog-0 > app-perquisite > mat-dialog-actions > button"
+    );
+    await delay(1000);
+
+    await clickButton(
+      page,
+      "#mat-dialog-0 > app-perquisite > div.overlay.ng-star-inserted > div > div > div.card-body > div:nth-child(2) > button.btn.btn-primary"
+    );
+    await delay(1000);
+    logger.info("selecting District");
+    await selectOption(page, 'select[name="district"]', district);
+    await delay(1000);
+    logger.info("selecting taluka");
+    await selectOption(page, 'select[name="taluka"]', taluk);
+    await delay(1000);
+    logger.info("selecting hobli");
+
+    await selectOption(page, 'select[name="hobli"]', town);
+
+    await delay(1000);
+    logger.info("selecting village");
+
+    await selectOption(page, 'select[name="village"]', village);
+
+    switch (encumbranceType) {
+      case "ENCUMBRANCE_TYPE.ASNOS":
+        await fillAggriForm(page, surveyNo);
+        break;
+
+      case "ENCUMBRANCE_TYPE.HNOS":
+        await fillNonAggriForm(page, ["House No", "Door No"], houseNo);
+        break;
+
+      case "ENCUMBRANCE_TYPE.SNOS":
+        await fillNonAggriForm(page, ["Survey No"], surveyNo);
+        break;
+
+      case "ENCUMBRANCE_TYPE.PNOS":
+        await fillNonAggriForm(page, ["Flat No"], plotNo);
+        break;
+
+      case "ENCUMBRANCE_TYPE.FNOS":
+        await fillNonAggriForm(page, ["Flat No", "APT No"], flatNo);
+        break;
+
+      default:
+        logger.info("Invalid encumbranceType! ");
+        throw new Error("Invalid encumbranceType! ");
+    }
+
+    await fillDate(page, 'input[name="fromdate"]', startDate); //startDate
+    await fillDate(page, 'input[name="todate"]', endDate); //endDate
+
+    await delay(1000);
+
+    await clickButton(
+      page,
+      "body > div:nth-child(1) > app-root > div > div > app-ec-search-citizen > div > div.containe-lg > div > div > form > div.mt-3.text-center > button.mat-tooltip-trigger.btn.btn-primary.mr-1.ng-star-inserted"
+    );
+
+    const filePath = await generatePDF(
+      page,
+      "#PdfData > table",
+      `public/Downloads/${encumbranceType}`,
+      true
+    );
+    await browser.close();
+    return { status: "ok", filePath };
+  } catch (error) {
+    logger.error(error.message);
+
+    throw new Error(error.message);
+  } finally {
+    await browser.close();
+  }
 }
 
 module.exports = kaEc;
