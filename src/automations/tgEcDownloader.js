@@ -426,9 +426,8 @@ const fillBuildingDetails = async (
     ? await fillInput(page, "#ward_no", ward)
     : logger.info("Skipping ward input as it's empty"); //ward no
 
-  block
-    ? await fillInput(page, "#block_no", block)
-    : logger.info("Skipping block input as it's empty"); //ward no //blockno
+  await fillInput(page, "#block_no", "");
+  // : logger.info("Skipping block input as it's empty"); //ward no //blockno
 };
 
 const fillSurveyDetails = async (
