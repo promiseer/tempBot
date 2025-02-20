@@ -30,7 +30,7 @@ const initializeBrowser = async (options) => {
     saveSessionData: true, // Set to true to save session data
     caches: true, // Disable caching
     defaultViewport: null,
-    args: ["--start-maximized", "--no-sandbox", "--disable-setuid-sandbox"],
+    args: ["--start-maximized", "--no-sandbox", "--disable-setuid-sandbox","--disable-dev-shm-usage"],
     ...options,
   });
 };
@@ -481,7 +481,6 @@ const makeRequest = async (
   data = null,
   retries = 3
 ) => {
-
   let attempt = 0;
 
   while (attempt < retries) {

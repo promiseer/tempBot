@@ -4,6 +4,7 @@ services:
     build: 
       context: .
       dockerfile: ./compose/local/Dockerfile
+    shm_size: '1gb'
     container_name: botomation_backend
     restart: unless-stopped
     ports:

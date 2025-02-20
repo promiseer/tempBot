@@ -313,7 +313,7 @@ const handleSecondForm = async (
     await clickButton(page, ".btn.btn-primary");
 
     await page.waitForNavigation({
-      timeout: 60000,
+      timeout: 300000,
     });
     logger.info("Genrating the PDF...");
     const filePath = await generatePDF(
@@ -511,7 +511,7 @@ const ScrapeByNone = async (
     await clickButton(page, "#selectAllId");
     await clickButton(page, "button.btn.btn-primary");
     await page.waitForNavigation({
-      timeout: 60000,
+      timeout: 300000,
     });
     filePath = await generatePDF(
       page,
