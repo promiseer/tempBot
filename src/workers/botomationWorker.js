@@ -40,6 +40,7 @@ const processJob = async (job) => {
           const { filePath, sros } = await apEcDownloader(data);
           if (filePath) {
             const file = await uploadFileGC(fileDestination, filePath);
+             await uploadFileGC(fileDestination, `${filePath}.json`);
             await createAttachement(caseId, file, sros, encumbranceType, data);
             await deleteFile(filePath);
             logger.info(
@@ -56,6 +57,7 @@ const processJob = async (job) => {
           const { filePath, sros } = await tgEcDownloader(data);
           if (filePath) {
             const file = await uploadFileGC(fileDestination, filePath);
+            await uploadFileGC(fileDestination, `${filePath}.json`);
             await createAttachement(caseId, file, sros, encumbranceType, data);
             await deleteFile(filePath);
             logger.info(`Successfully processed TG-EC with Job ID:${id}`);
