@@ -1,5 +1,6 @@
 const logger = require("./logger");
 const fs = require("fs").promises;
+const pathModule = require('path'); // Importing the path module for handling file paths
 
 /**
  * Function to delete a file by its path
@@ -8,10 +9,14 @@ const fs = require("fs").promises;
 
 const deleteFile = async (filePath) => {
   try {
+    const filePathWithoutExt = pathModule.format({
+      dir: pathModule.dirname(filePath),  // Get the directory
+      name: pathModule.basename(filePath, pathModule.extname(filePath)),  // Remove the extension
+    });
     if (filePath.includes("dummy")) {
       logger.info(`skipped dummy file : ${filePath}`);
     } else {
-      await fs.unlink(filePath);
+      await fs.unlink(filePathWithoutExt);
 
       logger.info(`File deleted successfully: ${filePath}`);
     }
