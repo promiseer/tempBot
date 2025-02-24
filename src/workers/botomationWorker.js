@@ -42,7 +42,8 @@ const processJob = async (job) => {
             const file = await uploadFileGC(fileDestination, `${filePath}.pdf`);
             await uploadFileGC("dev/json-extracts", `${filePath}.json`);
             await createAttachement(caseId, file, sros, encumbranceType, data);
-            await deleteFile(filePath);
+            await deleteFile(`${filePath}.pdf`);
+            await deleteFile(`${filePath}.json`);
             logger.info(
               `Successfully processed ANDHRA PRADESH with Job ID:${id}`
             );
@@ -59,7 +60,8 @@ const processJob = async (job) => {
             const file = await uploadFileGC(fileDestination, `${filePath}.pdf`);
             await uploadFileGC("dev/json-extracts", `${filePath}.json`);
             await createAttachement(caseId, file, sros, encumbranceType, data);
-            await deleteFile(filePath);
+            await deleteFile(`${filePath}.pdf`);
+            await deleteFile(`${filePath}.json`);
             logger.info(`Successfully processed TG-EC with Job ID:${id}`);
           }
         } catch (error) {
