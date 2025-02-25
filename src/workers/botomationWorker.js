@@ -40,7 +40,7 @@ const processJob = async (job) => {
           const { filePath, sros } = await apEcDownloader(data);
           if (filePath) {
             const file = await uploadFileGC(fileDestination, `${filePath}.pdf`);
-            await uploadFileGC("dev/json-extracts", `${filePath}.json`);
+            await uploadFileGC(fileDestination, `${filePath}_extracted.json`);
             await createAttachement(caseId, file, sros, encumbranceType, data);
             await deleteFile(`${filePath}.pdf`);
             await deleteFile(`${filePath}.json`);
@@ -58,7 +58,7 @@ const processJob = async (job) => {
           const { filePath, sros } = await tgEcDownloader(data);
           if (filePath) {
             const file = await uploadFileGC(fileDestination, `${filePath}.pdf`);
-            await uploadFileGC("dev/json-extracts", `${filePath}.json`);
+            await uploadFileGC(fileDestination, `${filePath}_extracted.json`);
             await createAttachement(caseId, file, sros, encumbranceType, data);
             await deleteFile(`${filePath}.pdf`);
             await deleteFile(`${filePath}.json`);

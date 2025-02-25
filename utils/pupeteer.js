@@ -339,7 +339,10 @@ const generatePDF = async (page, tableSelector, filePath, KA = false) => {
     //   await page.setContent(finalHTML); // Set the HTML content to the page
     // }
     await downloadPdf(page, filePath);
-    await fs.promises.writeFile(`${filePath}.json`, JSON.stringify(tableJSON));
+    await fs.promises.writeFile(
+      `${filePath}_extracted.json`,
+      JSON.stringify(tableJSON)
+    );
     return filePath;
   } catch (error) {
     logger.error(`Error:`, error);
