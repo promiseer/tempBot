@@ -30,7 +30,12 @@ const initializeBrowser = async (options) => {
     saveSessionData: true, // Set to true to save session data
     caches: true, // Disable caching
     defaultViewport: null,
-    args: ["--start-maximized", "--no-sandbox", "--disable-setuid-sandbox","--disable-dev-shm-usage"],
+    args: [
+      "--start-maximized",
+      "--no-sandbox",
+      "--disable-setuid-sandbox",
+      "--disable-dev-shm-usage",
+    ],
     ...options,
   });
 };
@@ -77,16 +82,36 @@ const selectOption = async (page, selector, value) => {
   }
 };
 
-const getSelectedOption = async (page, selector, value) => {
-  await page.waitForSelector(selector + " option");
+const getSelectedOption = async (
+  page,
+  selector,
+  value,
+  maxAttempts = 3,
+  sleep = 1000
+) => {
+  let attempts = 0;
 
-  const options = await page.$$eval(selector + " option", (options) => {
-    return options.map((option) => ({
-      [option.textContent.trim()]: option.value,
-    }));
-  });
-  const matchedOption = options.find((option) => option[value]);
-  return matchedOption ? matchedOption[value] : null;
+  while (attempts < maxAttempts) {
+    try {
+      await page.waitForSelector(selector + " option");
+
+      const options = await page.$$eval(selector + " option", (options) => {
+        return options.map((option) => ({
+          [option.textContent.trim()]: option.value,
+        }));
+      });
+      const matchedOption = options.find((option) => option[value]);
+      attempts++;
+      if (attempts < maxAttempts) {
+        logger.info(`Retrying... (${attempts}/${maxAttempts})`);
+        await delay(sleep); // Wait before retrying
+      }
+      return matchedOption ? matchedOption[value] : null;
+    } catch (error) {
+      logger.info(`Error on attempt ${attempts + 1}: ${error}`);
+      throw error;
+    }
+  }
 };
 
 const clickButton = async (page, selector, maxAttempts = 3, sleep = 1000) => {
