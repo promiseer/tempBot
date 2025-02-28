@@ -170,7 +170,7 @@ const responseValidator = async (page, url, maxRetries = 3) => {
     try {
       const response = await page.waitForResponse(
         (response) => response.url() === url && response.status() === 200,
-        { timeout: 10000 } // Adjust timeout as needed
+        { timeout: 30000 }
       );
       const contentType = response.headers()["content-type"];
 
