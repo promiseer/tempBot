@@ -168,7 +168,6 @@ const responseValidator = async (page, url, maxRetries = 3) => {
 
   while (attempts < maxRetries) {
     try {
-      await logAllUrls(page);
       const response = await page.waitForResponse(
         (response) => response.url() === url && response.status() === 200,
         { timeout: 10000 } // Adjust timeout as needed
