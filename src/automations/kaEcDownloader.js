@@ -193,8 +193,8 @@ async function kaEc({
   taluk,
   town,
 }) {
+  const browser = await puppeteerInstance();
   try {
-    const browser = await puppeteerInstance();
     let page = await browser.newPage();
     await page.goto("https://kaveri.karnataka.gov.in/landing-page", {
       waitUntil: "load",
@@ -207,7 +207,7 @@ async function kaEc({
     await handleDialog(page);
     await delay(2000);
     await getAndFillOtp(page);
-
+    await delay(1000);
     await clickButton(
       page,
       "body > div:nth-child(1) > app-root > div > div > app-kaveri-dashboard > div > div.animated.fadeIn.mt-3.ng-tns-c140-2 > div > div.row.p-2.ng-tns-c140-2 > div.col-md-4.d-flex.align-items-center.justify-content-center.ng-tns-c140-2 > div > button"
@@ -274,7 +274,10 @@ async function kaEc({
     }
 
     await fillDate(page, 'input[name="fromdate"]', startDate); //startDate
-    await fillDate(page, 'input[name="todate"]', endDate); //endDate
+    endDate
+    ? await fillDate(page, 'input[name="todate"]', endDate)
+    : logger.info("Skipping Date input as it's empty");
+     //endDate
 
     await delay(1000);
 
