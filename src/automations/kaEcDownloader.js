@@ -275,9 +275,9 @@ async function kaEc({
 
     await fillDate(page, 'input[name="fromdate"]', startDate); //startDate
     endDate
-    ? await fillDate(page, 'input[name="todate"]', endDate)
-    : logger.info("Skipping Date input as it's empty");
-     //endDate
+      ? await fillDate(page, 'input[name="todate"]', endDate)
+      : logger.info("Skipping Date input as it's empty");
+    //endDate
 
     await delay(1000);
 
@@ -293,7 +293,7 @@ async function kaEc({
       true
     );
     await browser.close();
-    return { status: "ok", filePath };
+    return { status: "ok", filePath, sros: "" };
   } catch (error) {
     logger.error(error.message);
 
