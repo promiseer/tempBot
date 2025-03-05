@@ -5,7 +5,9 @@ const {
   puppeteerInstance,
   selectOption,
   generatePDF,
+  responseValidator,
 } = require("../../utils/pupeteer");
+let dummyFilePath = "public/dummy/dummy.pdf";
 
 const fetchOtpFromEmail = require("../../utils/fetchOtp");
 const logger = require("../../utils/logger");
@@ -206,6 +208,11 @@ async function kaEc({
     logger.info("Login completed.");
     await handleDialog(page);
     await delay(2000);
+    await responseValidator(
+      page,
+      "https://kaveri.karnataka.gov.in/api/SendEncOTP"
+    );
+    await delay(3000);
     await getAndFillOtp(page);
     await delay(1000);
     await clickButton(
@@ -286,6 +293,16 @@ async function kaEc({
       "body > div:nth-child(1) > app-root > div > div > app-ec-search-citizen > div > div.containe-lg > div > div > form > div.mt-3.text-center > button.mat-tooltip-trigger.btn.btn-primary.mr-1.ng-star-inserted"
     );
 
+    const ecResponse = await responseValidator(
+      page,
+      "https://kaveri.karnataka.gov.in/api/ECSearch"
+    );
+    console.log(ecResponse);
+
+    if (!ecResponse || !ecResponse?.data == []) {
+      logger.error("Documents not found on search data.");
+      return { status: "ok", filePath: dummyFilePath, sros: "" };
+    }
     const filePath = await generatePDF(
       page,
       "#PdfData > table",
