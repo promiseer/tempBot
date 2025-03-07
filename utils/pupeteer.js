@@ -39,11 +39,12 @@ const initializeBrowser = async (options) => {
       "--proxy-bypass-list=*",
       "--disable-gpu",
       "--no-first-run",
-      "--no-zygote",
-      "--single-process",
+      // "--no-zygote",
+      // "--single-process",
       "--ignore-certificate-errors",
       "--ignore-certificate-errors-spki-list",
       "--enable-features=NetworkService",
+      "--unlimited-storage",
     ],
     ...options,
   });
@@ -199,7 +200,9 @@ const responseValidator = async (page, url, maxRetries = 3) => {
           }
         });
       } else {
-        throw new Error(`Failed to validate response after ${maxRetries} attempts`);
+        throw new Error(
+          `Failed to validate response after ${maxRetries} attempts`
+        );
       }
     }
   }
