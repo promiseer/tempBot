@@ -181,7 +181,9 @@ const getZoneData = async () => {
         }
       }
     }
-
+    if (allZoneData.length === 0) {
+      throw new Error("No zone data found.");
+    }
     return allZoneData;
   } catch (error) {
     console.log(error);

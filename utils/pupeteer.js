@@ -30,11 +30,21 @@ const initializeBrowser = async (options) => {
     saveSessionData: true, // Set to true to save session data
     caches: true, // Disable caching
     defaultViewport: null,
+    ignoreHTTPSErrors: true,
     args: [
       "--start-maximized",
       "--no-sandbox",
       "--disable-setuid-sandbox",
       "--disable-dev-shm-usage",
+      "--proxy-bypass-list=*",
+      "--disable-gpu",
+      "--no-first-run",
+      // "--no-zygote",
+      // "--single-process",
+      "--ignore-certificate-errors",
+      "--ignore-certificate-errors-spki-list",
+      "--enable-features=NetworkService",
+      "--unlimited-storage",
     ],
     ...options,
   });
@@ -148,22 +158,53 @@ const clickButton = async (page, selector, maxAttempts = 3, sleep = 1000) => {
     );
   }
 };
+const logAllUrls = async (page) => {
+  page.on("request", (request) => {
+    logger.info(`URL: ${request.url()}`);
+  });
+};
 
-const responseValidator = async (page, url) => {
-  try {
-    const response = await page.waitForResponse(
-      (response) => response.url() === url && response.status() === 200
-    );
-    const contentType = response.headers()["content-type"];
+const responseValidator = async (page, url, maxRetries = 3) => {
+  let attempts = 0;
 
-    // Check if the response is JSON
-    if (contentType && contentType.includes("application/json")) {
-      return await response.json(); // Parse and return JSON response
-    } else {
-      return await response.text(); // Return plain text or other format
-    } // Return the response body (assuming it's JSON)
-  } catch (error) {
-    logger.error(error.message);
+  while (attempts < maxRetries) {
+    try {
+      const response = await page.waitForResponse(
+        (response) => response.url() === url && response.status() === 200,
+        { timeout: 30000 }
+      );
+      const contentType = response.headers()["content-type"];
+
+      // Check if the response is JSON
+      if (contentType && contentType.includes("application/json")) {
+        return await response.json(); // Parse and return JSON response
+      } else {
+        return await response.text(); // Return plain text or other format
+      } // Return the response body (assuming it's JSON)
+    } catch (error) {
+      attempts++;
+      logger.error(`Attempt ${attempts} failed: ${error.message}`);
+      if (attempts < maxRetries) {
+        logger.info(`Retrying with insecure connection...`);
+        await page.setExtraHTTPHeaders({
+          "Upgrade-Insecure-Requests": "1",
+        });
+        await page.setRequestInterception(true);
+        page.on("request", (request) => {
+          if (request.url().startsWith("https://")) {
+            request.continue({
+              url: request.url().replace("https://", "http://"),
+            });
+          } else {
+            request.continue();
+          }
+        });
+      } else {
+        throw new Error(
+          `Failed to validate response after ${maxRetries} attempts`
+        );
+      }
+    }
   }
 };
 

@@ -5,7 +5,9 @@ const {
   puppeteerInstance,
   selectOption,
   generatePDF,
+  responseValidator,
 } = require("../../utils/pupeteer");
+let dummyFilePath = "public/dummy/dummy.pdf";
 
 const fetchOtpFromEmail = require("../../utils/fetchOtp");
 const logger = require("../../utils/logger");
@@ -193,8 +195,8 @@ async function kaEc({
   taluk,
   town,
 }) {
+  const browser = await puppeteerInstance();
   try {
-    const browser = await puppeteerInstance();
     let page = await browser.newPage();
     await page.goto("https://kaveri.karnataka.gov.in/landing-page", {
       waitUntil: "load",
@@ -206,8 +208,13 @@ async function kaEc({
     logger.info("Login completed.");
     await handleDialog(page);
     await delay(2000);
+    await responseValidator(
+      page,
+      "https://kaveri.karnataka.gov.in/api/SendEncOTP"
+    );
+    await delay(3000);
     await getAndFillOtp(page);
-
+    await delay(1000);
     await clickButton(
       page,
       "body > div:nth-child(1) > app-root > div > div > app-kaveri-dashboard > div > div.animated.fadeIn.mt-3.ng-tns-c140-2 > div > div.row.p-2.ng-tns-c140-2 > div.col-md-4.d-flex.align-items-center.justify-content-center.ng-tns-c140-2 > div > button"
@@ -274,7 +281,10 @@ async function kaEc({
     }
 
     await fillDate(page, 'input[name="fromdate"]', startDate); //startDate
-    await fillDate(page, 'input[name="todate"]', endDate); //endDate
+    endDate
+      ? await fillDate(page, 'input[name="todate"]', endDate)
+      : logger.info("Skipping Date input as it's empty");
+    //endDate
 
     await delay(1000);
 
@@ -283,6 +293,16 @@ async function kaEc({
       "body > div:nth-child(1) > app-root > div > div > app-ec-search-citizen > div > div.containe-lg > div > div > form > div.mt-3.text-center > button.mat-tooltip-trigger.btn.btn-primary.mr-1.ng-star-inserted"
     );
 
+    const ecResponse = await responseValidator(
+      page,
+      "https://kaveri.karnataka.gov.in/api/ECSearch"
+    );
+    console.log(ecResponse);
+
+    if (!ecResponse || !ecResponse?.data == []) {
+      logger.error("Documents not found on search data.");
+      return { status: "ok", filePath: dummyFilePath, sros: "" };
+    }
     const filePath = await generatePDF(
       page,
       "#PdfData > table",
@@ -290,7 +310,7 @@ async function kaEc({
       true
     );
     await browser.close();
-    return { status: "ok", filePath };
+    return { status: "ok", filePath, sros: "" };
   } catch (error) {
     logger.error(error.message);
 

@@ -63,6 +63,7 @@ async function clickAndSearchEcDnos(page, sroName, docNo, docYear) {
     let captchaImagePath = null;
     try {
       logger.info(`DNOS attempt ${attempt} of ${maxCaptchaAttempts}...`);
+      await new Promise((r) => setTimeout(r, 5000));
 
       // If there's a captcha field (#txt_Captcha), solve it.
       // If not found, we assume no captcha needed for this scenario.

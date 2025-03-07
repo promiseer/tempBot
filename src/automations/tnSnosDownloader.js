@@ -69,6 +69,7 @@ async function clickAndSearchSnos(
     let captchaImagePath = null;
     try {
       logger.info(`SNOS attempt ${attempt} of ${maxCaptchaAttempts}...`);
+      await new Promise((r) => setTimeout(r, 5000));
 
       // Wait for #txt_Captcha if it exists
       const captchaSelector = "#txt_Captcha";

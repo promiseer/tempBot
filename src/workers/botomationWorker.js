@@ -66,7 +66,7 @@ const processJob = async (job) => {
         break;
       case "KARNATAKA":
         try {
-          const { filePath } = await kaEcDownloader(data);
+          const { filePath, sros } = await kaEcDownloader(data);
           if (filePath) {
             const file = await uploadFileGC(fileDestination, filePath);
             await createAttachement(caseId, file, sros, encumbranceType, data);
