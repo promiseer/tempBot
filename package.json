@@ -6,7 +6,7 @@
   "scripts": {
     "start": "node src/app.js",
     "dev": "nodemon src/app.js",
-    "worker": "nodemon src/workers/botomationWorker.js",
+    "worker": "node src/workers/botomationWorker.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],

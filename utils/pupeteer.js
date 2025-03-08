@@ -317,117 +317,158 @@ const elementFinder = async (page, selector, delay = 1000) => {
 const generatePDF = async (page, tableSelector, filePath, KA = false) => {
   try {
     const htmlTemplate = `
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Extracted Table PDF</title>
-  <style>
-      table {
-          border-collapse: collapse !important;
-          width: 100%; /* Adjust the percentage as needed */
-      }
-
-      td, th {
-          border: 2px solid black !important;;
-          padding: 8px;
-          margin-bottom: 0 ;
-          page-break-inside: avoid; /* Prevent row splitting across pages */
-          word-wrap: break-word; /* Allow text to wrap inside the cells */
-          white-space: normal; /* Ensure content wraps inside cells */
-          overflow-wrap: break-word; /* Break words that are too long */
-          max-width: 200px; /* Adjust the width as needed */
-      }
-      thead {
-          display: table-header-group; /* Repeat header on each page */
-      }
-      th:nth-child(1), td:nth-child(1) {
-          width: 1%;
-      }
-
-      th:nth-child(2), td:nth-child(2) {
-          width: 31%;
-      }
-
-      th:nth-child(3), td:nth-child(3) {
-          width: 8%;
-      }
-
-      th:nth-child(4), td:nth-child(4) {
-          width: 10%;
-      }
-
-      th:nth-child(5), td:nth-child(5) {
-          width: 28%;
-      }
-
-      th:nth-child(6), td:nth-child(6) {
-          width: 7%;
-      }
-
-      .centered-table {
-          text-align: center;
-      }
-  </style>
-</head>
-<body>
-  <div id="content">
-      <!-- Table will be appended here -->
-  </div>
-</body>
-</html>`;
-
-    const getTableHTML = async (retryCount = 3) => {
-      try {
-        return await page.evaluate((selector) => {
-          const table = document.querySelector(selector);
-          if (!table) {
-            throw new Error("Table not found");
-          }
-          return table.outerHTML;
-        }, tableSelector);
-      } catch (error) {
-        if (retryCount > 0) {
-          logger.info(
-            `Retrying table extraction... Attempts left: ${retryCount}`
-          );
-          await delay(2000); // Wait 2 seconds before retrying
-          return getTableHTML(retryCount - 1); // Recursive retry with decremented counter
-        } else {
-          throw new Error("Table extraction failed after 3 retries");
+  <!DOCTYPE html>
+  <html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Extracted Table PDF</title>
+    <style>
+        table {
+            border-collapse: collapse !important;
+            width: 100%; /* Adjust the percentage as needed */
         }
-      }
-    };
-    const tableHTML = await getTableHTML();
+
+        td, th {
+            border: 2px solid black !important;;
+            padding: 8px;
+            margin-bottom: 0 ;
+            page-break-inside: avoid; /* Prevent row splitting across pages */
+            word-wrap: break-word; /* Allow text to wrap inside the cells */
+            white-space: normal; /* Ensure content wraps inside cells */
+            overflow-wrap: break-word; /* Break words that are too long */
+            max-width: 200px; /* Adjust the width as needed */
+        }
+        thead {
+            display: table-header-group; /* Repeat header on each page */
+        }
+        th:nth-child(1), td:nth-child(1) {
+            width: 1%;
+        }
+
+        th:nth-child(2), td:nth-child(2) {
+            width: 31%;
+        }
+
+        th:nth-child(3), td:nth-child(3) {
+            width: 8%;
+        }
+
+        th:nth-child(4), td:nth-child(4) {
+            width: 10%;
+        }
+
+        th:nth-child(5), td:nth-child(5) {
+            width: 28%;
+        }
+
+        th:nth-child(6), td:nth-child(6) {
+            width: 7%;
+        }
+
+        .centered-table {
+            text-align: center;
+        }
+    </style>
+  </head>
+  <body>
+    <div id="content">
+        <!-- Table will be appended here -->
+    </div>
+  </body>
+  </html>`;
+
+    const { tableHTML, tableJSON } = await generateFormattedTable(
+      page,
+      tableSelector,
+      KA
+    );
 
     let finalHTML = htmlTemplate.replace(
       "<!-- Table will be appended here -->",
       tableHTML
     );
+
     await page.setContent(finalHTML); // Set the HTML content to the page
-    if (KA) {
-      const tableHTML = await generateFormattedTable(page, "table tr");
+    // if (KA) {
+    //   const tableHTML = await generateFormattedTable(page, "table tr");
 
-      finalHTML = htmlTemplate.replace(
-        "<!-- Table will be appended here -->",
-        tableHTML
-      );
-      await page.setContent(finalHTML); // Set the HTML content to the page
-    }
-
+    //   finalHTML = htmlTemplate.replace(
+    //     "<!-- Table will be appended here -->",
+    //     tableHTML
+    //   );
+    //   await page.setContent(finalHTML); // Set the HTML content to the page
+    // }
     await downloadPdf(page, filePath);
-    return `${filePath}.pdf`;
+    await fs.promises.writeFile(
+      `${filePath}_extracted.json`,
+      JSON.stringify(tableJSON)
+    );
+    return filePath;
   } catch (error) {
     logger.error(`Error:`, error);
     throw error;
   }
 };
+const generateJsonFromTable = async (
+  page,
+  tableSelector,
+  KA,
+  retryCount = 3
+) => {
+  try {
+    return await page.evaluate(
+      (selector, KA) => {
+        const KA_SELECTOR = selector + " tr";
+        const table = document.querySelector(KA ? KA_SELECTOR : selector);
+        if (!table) {
+          throw new Error("Table not found");
+        }
 
-const generateFormattedTable = async (page, selector, retry = 3) => {
-  // Evaluate the page to extract and format the data
-  const tableData = await page.evaluate((selector) => {
-    const tableHTML = `
+        const rows = Array.from(document.querySelectorAll(KA_SELECTOR)).slice(
+          1
+        ); // Skip the header row
+        const data = rows.map((row) => {
+          const columns = Array.from(row.querySelectorAll("td"));
+
+          return {
+            SLNo: columns[0]?.innerText.trim(),
+            description: columns[1]?.innerText.trim(),
+            dates: columns[2]?.innerText.trim(),
+            deedValue: columns[3]?.innerText.trim(),
+            parties: KA
+              ? columns[4]?.innerText.trim() +
+                "<br/> <br/>" +
+                columns[5]?.innerText.trim()
+              : columns[4]?.innerText.trim(),
+            identifiers: KA
+              ? columns[6]?.innerText.trim() +
+                "<br/> <br/>" +
+                columns[7]?.innerText.trim() +
+                "<br/> <br/>" +
+                columns[8]?.innerText.trim()
+              : columns[5]?.innerText.trim(),
+          };
+        });
+
+        return data;
+      },
+      tableSelector,
+      KA
+    );
+  } catch (error) {
+    if (retryCount > 0) {
+      logger.info(`Retrying table extraction... Attempts left: ${retryCount}`);
+      await delay(2000); // Wait 2 seconds before retrying
+      return generateJsonFromTable(page, tableSelector, KA, retryCount - 1); // Recursive retry with decremented counter
+    } else {
+      throw new Error("Table extraction failed after 3 retries");
+    }
+  }
+};
+
+const generateFormattedTable = async (page, selector, KA) => {
+  const tableHTMLTemplate = `
       <table class="tableData generatedTable table table-bordered" style="width: 100%">
         <thead>
           <tr style="text-align: center">
@@ -444,38 +485,25 @@ const generateFormattedTable = async (page, selector, retry = 3) => {
         </tbody>
       </table>
     `;
-
-    // Select rows, skipping the first three rows (header and some initial rows)
-    const rows = Array.from(document.querySelectorAll(selector)).slice(3);
-
-    // Map the rows into formatted <tr> elements
-    const formattedTBody = rows.map((row) => {
-      const columns = row.querySelectorAll("td");
-
-      return `<tr>
-        <td class="centered-table"> ${columns[0]?.innerText?.trim()}</td>
-        <td class="centered-table"> ${columns[1]?.innerText?.trim()}</td>
-        <td class="centered-table"> ${columns[2]?.innerText?.trim()}</td>
-        <td class="centered-table"> ${columns[3]?.innerText?.trim()}</td>
-        <td class="centered-table"> ${columns[4]?.innerText?.trim()} <br/> <br/>${columns[5]?.innerText?.trim()}</td>
-        <td class="centered-table"> ${columns[6]?.innerText?.trim()} <br/> <br/>
-           ${columns[7]?.innerText?.trim()} <br/> <br/>
-           ${columns[8]?.innerText?.trim()} 
-        </td>
+  const tableJSON = await generateJsonFromTable(page, selector, KA);
+  const formattedTBody = tableJSON.map((row) => {
+    return `<tr>
+        <td class="centered-table"> ${row.SLNo}</td>
+        <td class="centered-table"> ${row.description}</td>
+        <td class="centered-table"> ${row.dates}</td>
+        <td class="centered-table"> ${row.deedValue}</td>
+        <td class="centered-table"> ${row.parties}</td>
+        <td class="centered-table"> ${row.identifiers}</td>
       </tr>`;
-    });
+  });
 
-    // Replace the placeholder with the formatted tbody rows
-    const finalTable = tableHTML.replace(
-      "<!-- Tbody will be appended here -->",
-      formattedTBody.join("")
-    );
+  // Replace the placeholder with the formatted tbody rows
+  const tableHTML = tableHTMLTemplate.replace(
+    "<!-- Tbody will be appended here -->",
+    formattedTBody.join("")
+  );
 
-    // Return the full table HTML as a string
-    return finalTable;
-  }, selector);
-
-  return tableData;
+  return { tableHTML, tableJSON };
 };
 
 // Merge PDFs
