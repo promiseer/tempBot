@@ -149,7 +149,7 @@ const searchByDocumentNumber = async (
 
       const filePath = await mergePDFs(
         tasks,
-        `public/Downloads/${docNoIdentifier}.pdf`
+        `public/Downloads/${docNoIdentifier}`
       );
       return filePath;
     } else {
@@ -243,7 +243,7 @@ const handleMultipleSro = async (
   const filePaths = await Promise.all(tasks);
   const filePath = await mergePDFs(
     filePaths,
-    `public/Downloads/${encumbranceType}.pdf`
+    `public/Downloads/${encumbranceType}`
   );
   return filePath;
 };

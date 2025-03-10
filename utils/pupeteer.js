@@ -526,7 +526,7 @@ async function mergePDFs(pdfPaths, outputPath) {
     // await mergePNGScreenshots(pngOnlyPaths, mergedPdf);
     // Save the merged PDF as bytes and write to the output file
     const mergedPdfBytes = await mergedPdf.save();
-    fs.writeFileSync(outputPath, mergedPdfBytes);
+    fs.writeFileSync(`${outputPath}.pdf`, mergedPdfBytes);
     logger.info(`Merged PDF saved to ${outputPath}`);
     return outputPath;
   } catch (error) {
