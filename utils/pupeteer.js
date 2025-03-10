@@ -511,23 +511,23 @@ async function mergePDFs(pdfPaths, outputPath) {
   try {
     // Create a new PDF document to hold the merged content
     const mergedPdf = await PDFDocument.create();
-    const pdfOnlyPaths = pdfPaths.filter((path) => path.endsWith(".pdf"));
+    // const pdfOnlyPaths = pdfPaths.filter((path) => path.endsWith(".pdf"));
     // const pngOnlyPaths = pdfPaths.filter((path) => path.endsWith(".png"));
 
-    if (pdfOnlyPaths.length === 0) {
+    if (pdfPaths.length === 0) {
       logger.info("No valid PDF or PNG files found to merge.");
       return null;
     }
 
     // Merge PDF documents
-    await mergePDFDocuments(pdfOnlyPaths, mergedPdf);
-
+    await mergePDFDocuments(pdfPaths, mergedPdf);
+    await mergeJSONFiles(pdfPaths, outputPath);
     // Merge PNG screenshots
     // await mergePNGScreenshots(pngOnlyPaths, mergedPdf);
     // Save the merged PDF as bytes and write to the output file
     const mergedPdfBytes = await mergedPdf.save();
     fs.writeFileSync(`${outputPath}.pdf`, mergedPdfBytes);
-    logger.info(`Merged PDF saved to ${outputPath}`);
+    logger.info(`Merged PDF saved to ${outputPath}.pdf`);
     return outputPath;
   } catch (error) {
     logger.error(`Error:${error.message}`);
@@ -537,14 +537,51 @@ async function mergePDFs(pdfPaths, outputPath) {
 // Function to merge PDF files
 async function mergePDFDocuments(pdfOnlyPaths, mergedPdf) {
   for (const pdfPath of pdfOnlyPaths) {
-    logger.info(`Merging PDF: ${pdfPath}`);
-    const pdfBytes = fs.readFileSync(pdfPath);
+    logger.info(`Merging PDF: ${pdfPath}.pdf`);
+    const pdfBytes = fs.readFileSync(`${pdfPath}.pdf`);
     const pdf = await PDFDocument.load(pdfBytes);
 
     // Copy each page to the merged PDF
     const copiedPages = await mergedPdf.copyPages(pdf, pdf.getPageIndices());
     copiedPages.forEach((page) => mergedPdf.addPage(page));
-    await deleteFile(pdfPath); // Optional: Delete original PDF after merging
+    await deleteFile(`${pdfPath}.pdf`); // Optional: Delete original PDF after merging
+  }
+}
+
+// Function to merge JSON files
+async function mergeJSONFiles(jsonFilePaths, outputPath) {
+  try {
+    let mergedData = [];
+
+    for (const jsonPath of jsonFilePaths) {
+      logger.info(`Merging JSON: ${jsonPath}`);
+      try {
+        const fileContent = fs.readFileSync(`${jsonPath}_extracted.json`, "utf8");
+        const jsonData = JSON.parse(fileContent);
+
+        // Check if the data is an array or object and handle accordingly
+        if (Array.isArray(jsonData)) {
+          mergedData = [...mergedData, ...jsonData];
+        } else {
+          mergedData.push(jsonData);
+        }
+
+        // Optional: Delete original JSON file after merging
+        await deleteFile(`${jsonPath}_extracted.json`);
+      } catch (error) {
+        logger.error(
+          `Error processing JSON file ${jsonPath}: ${error.message}`
+        );
+      }
+    }
+
+    // Write the merged JSON to the output file
+    fs.writeFileSync(`${outputPath}_extracted.json`, JSON.stringify(mergedData, null, 2));
+    logger.info(`Merged JSON saved to ${outputPath}.json`);
+    return outputPath;
+  } catch (error) {
+    logger.error(`Error merging JSON files: ${error.message}`);
+    throw error;
   }
 }
 
