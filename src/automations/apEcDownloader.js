@@ -13,7 +13,7 @@ const {
   delay,
   mergePDFs,
 } = require("../../utils/pupeteer");
-let dummyFilePath = "public/dummy/dummy.pdf";
+let dummyFilePath = "public/dummy/dummy";
 
 // Helper function for navigation error handling
 const handleNavigationError = async (fn, ...args) => {

@@ -154,7 +154,7 @@ const handlePostFormFIlled = async (page, docNoIdentifier) => {
 
     if (checkboxes.length === 0) {
       logger.error("No checkboxes found in the ordered list.");
-      return "public/dummy/dummy.pdf";
+      return "public/dummy/dummy";
     }
 
     const threshold = 50;
@@ -297,7 +297,7 @@ const searchByDocumentNumber = async (
     // Check if the text content matches
     if (text.trim() === "No Data Found") {
       logger.info("No Data Found!");
-      return "public/dummy/dummy.pdf";
+      return "public/dummy/dummy";
     }
   }
   await clickButton(page, "#bean > button");
