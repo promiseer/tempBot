@@ -61,7 +61,7 @@ const processJob = async (job) => {
             await uploadFileGC(fileDestination, `${filePath}_extracted.json`);
             await createAttachement(caseId, file, sros, encumbranceType, data);
             await deleteFile(`${filePath}.pdf`);
-            await deleteFile(`${filePath}.json`);
+            await deleteFile(`${filePath}_extracted.json`);
             logger.info(`Successfully processed TG-EC with Job ID:${id}`);
           }
         } catch (error) {
