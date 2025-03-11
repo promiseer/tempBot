@@ -143,11 +143,17 @@ const handlePostFormFIlled = async (page, docNoIdentifier) => {
     // Dynamically wait for navigation only if the page takes time to load
     await Promise.race([
       page.waitForNavigation({
-        waitUntil: ["networkidle2", "domcontentloaded"],
-        timeout: 60000,
-      }),
+          waitUntil: ["networkidle2", "domcontentloaded"],
+          timeout: 60000,
+        })
+        .catch(() => logger.info("Navigation timeout or error occurred")),
       new Promise((resolve) => setTimeout(resolve, 5000)), // Timeout for fast-loading pages
     ]);
+
+    await page
+      .waitForSelector("#form1", { timeout: 10000 })
+      .catch(() => logger.info("Form selector not found, continuing anyway"));
+
     const checkboxes = await page.$$(
       "#form1 > div.s_d > div.col-md-3.col-sm-4 > ol input[type='checkbox']"
     );
@@ -157,10 +163,8 @@ const handlePostFormFIlled = async (page, docNoIdentifier) => {
       return "public/dummy/dummy";
     }
 
-    const threshold = 50;
-
     // Click each checkbox if it is not already checked
-    // if (checkboxes.length > threshold) {
+    // if (checkboxes.length > 50) {
     //   // If there are many checkboxes, click each individually
     //   for (const checkbox of checkboxes) {
     //     const isChecked = await checkbox.evaluate((el) => el.checked);
@@ -171,6 +175,7 @@ const handlePostFormFIlled = async (page, docNoIdentifier) => {
     //   logger.info("clicked on all check boxes");
     // } else {
     // If fewer checkboxes, click the "Select All" button
+    await delay(2000);
     await clickButton(page, "#checkall2");
     logger.info("clicked on all check boxes");
     // }
