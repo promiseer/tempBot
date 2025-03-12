@@ -41,7 +41,7 @@ const processJob = async (job) => {
           const { filePath, sros } = await apEcDownloader(data);
           if (filePath) {
             const file = await uploadFileGC(fileDestination, `${filePath}.pdf`, fileKey);
-            await uploadFileGC(fileDestination, `${filePath}_extracted.json`, fileKey);
+            await uploadFileGC(fileDestination, `${filePath}_extracted.json`, `${fileKey}__extracted`);
             await createAttachement(caseId, file, sros, encumbranceType, data);
             await deleteFile(`${filePath}.pdf`);
             await deleteFile(`${filePath}_extracted.json`);
@@ -59,7 +59,7 @@ const processJob = async (job) => {
           const { filePath, sros } = await tgEcDownloader(data);
           if (filePath) {
             const file = await uploadFileGC(fileDestination, `${filePath}.pdf`, fileKey);
-            await uploadFileGC(fileDestination, `${filePath}_extracted.json`, fileKey);
+            await uploadFileGC(fileDestination, `${filePath}_extracted.json`, `${fileKey}__extracted`);
             await createAttachement(caseId, file, sros, encumbranceType, data);
             await deleteFile(`${filePath}.pdf`);
             await deleteFile(`${filePath}_extracted.json`);
@@ -73,10 +73,12 @@ const processJob = async (job) => {
         try {
           const { filePath, sros } = await kaEcDownloader(data);
           if (filePath) {
-            const file = await uploadFileGC(fileDestination, filePath, fileKey);
+            const file = await uploadFileGC(fileDestination, `${filePath}.pdf`, fileKey);
+            await uploadFileGC(fileDestination, `${filePath}_extracted.json`, `${fileKey}__extracted`);
             await createAttachement(caseId, file, sros, encumbranceType, data);
-            await deleteFile(filePath);
-            logger.info(`Successfully processed TG-EC with Job ID:${id}`);
+            await deleteFile(`${filePath}.pdf`);
+            await deleteFile(`${filePath}_extracted.json`);
+            logger.info(`Successfully processed KARNATAKA with Job ID:${id}`);
           }
         } catch (error) {
           logger.error(`Error processing KARNATAKA: ${error.message}`);
