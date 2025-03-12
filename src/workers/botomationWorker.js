@@ -13,6 +13,7 @@ const {
 const cluster = require("cluster");
 const totalCPUs = require("os").cpus().length;
 const processJob = async (job) => {
+  const fileKey = Date.now().toString();
   const { queue, data, id } = job;
   const {
     state,
@@ -39,8 +40,8 @@ const processJob = async (job) => {
         try {
           const { filePath, sros } = await apEcDownloader(data);
           if (filePath) {
-            const file = await uploadFileGC(fileDestination, `${filePath}.pdf`);
-            await uploadFileGC(fileDestination, `${filePath}_extracted.json`);
+            const file = await uploadFileGC(fileDestination, `${filePath}.pdf`, fileKey);
+            await uploadFileGC(fileDestination, `${filePath}_extracted.json`, fileKey);
             await createAttachement(caseId, file, sros, encumbranceType, data);
             await deleteFile(`${filePath}.pdf`);
             await deleteFile(`${filePath}_extracted.json`);
@@ -57,8 +58,8 @@ const processJob = async (job) => {
         try {
           const { filePath, sros } = await tgEcDownloader(data);
           if (filePath) {
-            const file = await uploadFileGC(fileDestination, `${filePath}.pdf`);
-            await uploadFileGC(fileDestination, `${filePath}_extracted.json`);
+            const file = await uploadFileGC(fileDestination, `${filePath}.pdf`, fileKey);
+            await uploadFileGC(fileDestination, `${filePath}_extracted.json`, fileKey);
             await createAttachement(caseId, file, sros, encumbranceType, data);
             await deleteFile(`${filePath}.pdf`);
             await deleteFile(`${filePath}_extracted.json`);
@@ -72,7 +73,7 @@ const processJob = async (job) => {
         try {
           const { filePath, sros } = await kaEcDownloader(data);
           if (filePath) {
-            const file = await uploadFileGC(fileDestination, filePath);
+            const file = await uploadFileGC(fileDestination, filePath, fileKey);
             await createAttachement(caseId, file, sros, encumbranceType, data);
             await deleteFile(filePath);
             logger.info(`Successfully processed TG-EC with Job ID:${id}`);
@@ -87,7 +88,7 @@ const processJob = async (job) => {
           const filePaths = await tnEcDownloader(data);
           if (filePaths && filePaths.length) {
             for (const filePath of filePaths) {
-              const file = await uploadFileGC(fileDestination, filePath);
+              const file = await uploadFileGC(fileDestination, filePath, fileKey);
               logger.info(`Saving Internal Document`);
               await createAttachement(
                 caseId,

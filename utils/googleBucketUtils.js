@@ -11,11 +11,10 @@ const getContentType = (filePath) => {
   return mime.lookup(ext) || "application/octet-stream"; // Fallback to a generic type if unknown
 };
 
-async function uploadFileGC(fileDestination, filePath) {
+async function uploadFileGC(fileDestination, filePath, fileKey) {
   return new Promise(async (resolve, reject) => {
     try {
       const contentType = getContentType(filePath);
-      const fileKey = Date.now().toString();
       const storage = new Storage({
         credentials: googleApiKey,
       });
