@@ -314,7 +314,13 @@ const elementFinder = async (page, selector, delay = 1000) => {
   await page.waitForSelector(selector, { timeout: delay }).catch(() => null);
 };
 
-const generatePDF = async (page, tableSelector, filePath, KA = false) => {
+const generatePDF = async (
+  page,
+  tableSelector,
+  filePath,
+  KA = false,
+  KA_JSON
+) => {
   try {
     const htmlTemplate = `
   <!DOCTYPE html>
@@ -381,7 +387,8 @@ const generatePDF = async (page, tableSelector, filePath, KA = false) => {
     const { tableHTML, tableJSON } = await generateFormattedTable(
       page,
       tableSelector,
-      KA
+      KA,
+      KA_JSON
     );
 
     let finalHTML = htmlTemplate.replace(
@@ -467,7 +474,7 @@ const generateJsonFromTable = async (
   }
 };
 
-const generateFormattedTable = async (page, selector, KA) => {
+const generateFormattedTable = async (page, selector, KA, KA_JSON) => {
   const tableHTMLTemplate = `
       <table class="tableData generatedTable table table-bordered" style="width: 100%">
         <thead>
@@ -485,7 +492,9 @@ const generateFormattedTable = async (page, selector, KA) => {
         </tbody>
       </table>
     `;
-  const tableJSON = await generateJsonFromTable(page, selector, KA);
+  const tableJSON = KA
+    ? KA_JSON
+    : await generateJsonFromTable(page, selector, KA);
   const formattedTBody = tableJSON.map((row) => {
     return `<tr>
         <td class="centered-table"> ${row.SLNo}</td>
@@ -556,7 +565,10 @@ async function mergeJSONFiles(jsonFilePaths, outputPath) {
     for (const jsonPath of jsonFilePaths) {
       logger.info(`Merging JSON: ${jsonPath}`);
       try {
-        const fileContent = fs.readFileSync(`${jsonPath}_extracted.json`, "utf8");
+        const fileContent = fs.readFileSync(
+          `${jsonPath}_extracted.json`,
+          "utf8"
+        );
         const jsonData = JSON.parse(fileContent);
 
         // Check if the data is an array or object and handle accordingly
@@ -576,7 +588,10 @@ async function mergeJSONFiles(jsonFilePaths, outputPath) {
     }
 
     // Write the merged JSON to the output file
-    fs.writeFileSync(`${outputPath}_extracted.json`, JSON.stringify(mergedData, null, 2));
+    fs.writeFileSync(
+      `${outputPath}_extracted.json`,
+      JSON.stringify(mergedData, null, 2)
+    );
     logger.info(`Merged JSON saved to ${outputPath}.json`);
     return outputPath;
   } catch (error) {

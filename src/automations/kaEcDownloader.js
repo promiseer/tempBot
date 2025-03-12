@@ -7,7 +7,7 @@ const {
   generatePDF,
   responseValidator,
 } = require("../../utils/pupeteer");
-let dummyFilePath = "public/dummy/dummy.pdf";
+let dummyFilePath = "public/dummy/dummy";
 
 const fetchOtpFromEmail = require("../../utils/fetchOtp");
 const logger = require("../../utils/logger");
@@ -180,29 +180,13 @@ const handleDialog = async (page) => {
     });
   });
 };
-async function kaEc({
-  houseNo,
-  surveyNo,
-  village,
-  ward,
-  block,
-  district,
-  encumbranceType,
-  startDate,
-  endDate,
-  plotNo,
-  flatNo,
-  taluk,
-  town,
-}) {
-  const browser = await puppeteerInstance();
+
+const initializeKaEc = async (page, village, district, taluk, town) => {
   try {
-    let page = await browser.newPage();
     await page.goto("https://kaveri.karnataka.gov.in/landing-page", {
       waitUntil: "load",
       timeout: 0,
     });
-
     // Start the login process
     await login(page);
     logger.info("Login completed.");
@@ -217,13 +201,13 @@ async function kaEc({
     await delay(1000);
     await clickButton(
       page,
-      "body > div:nth-child(1) > app-root > div > div > app-kaveri-dashboard > div > div.animated.fadeIn.mt-3.ng-tns-c140-2 > div > div.row.p-2.ng-tns-c140-2 > div.col-md-4.d-flex.align-items-center.justify-content-center.ng-tns-c140-2 > div > button"
+      "body > div:nth-child(1) > app-root > div > div > app-kaveri-dashboard > div > div.animated.fadeIn.mt-3.ng-tns-c190-2 > div > div.row.p-2.ng-tns-c190-2 > div.col-md-4.d-flex.align-items-center.justify-content-center.ng-tns-c190-2 > div > button"
     );
     await delay(1000);
 
     await clickButton(
       page,
-      "body > div:nth-child(1) > app-root > div > div > app-kaveri-dashboard > div > div.applicationTypeOverlay.ng-tns-c140-2.ng-star-inserted > div > app-application-type > div > div > div.card-body > div.row.mt-4 > div:nth-child(2) > img"
+      "body > div:nth-child(1) > app-root > div > div > app-kaveri-dashboard > div > div.applicationTypeOverlay.ng-tns-c190-2.ng-star-inserted > div > app-application-type > div > div > div.card-body > div.row.mt-4 > div:nth-child(2) > img"
     );
 
     await delay(1000);
@@ -253,30 +237,96 @@ async function kaEc({
     logger.info("selecting village");
 
     await selectOption(page, 'select[name="village"]', village);
+  } catch (error) {
+    logger.error(error.message);
+    throw new Error(error.message);
+  }
+};
 
+const formatPropertyData = (data) => {
+  return data.map((item, itemIndex) => {
+    const schedule = item.propertySchedules[0] || {};
+    const document = item.documentDetails[0] || {};
+    const parties = item.partyDetails
+      .map(
+        (p, index) =>
+          `${index + 1}.(${
+            p.partyTypeId === 1 ? "C" : "E"
+          }) ${p.partyName.trim()}`
+      )
+      .join("\n");
+
+    return {
+      SLNo: String(itemIndex + 1),
+      description: `VILL/COL: ${item.villageNamee || ""} W-B: 0-0 SURVEY: ${
+        schedule.description.match(/Sy No\.\s*([\d]+)/)?.[1] || "N/A"
+      }, EXTENT: ${
+        schedule.description.match(/Measurement:\s*([\d\sA-Za-z.]+)/)?.[1] ||
+        "N/A"
+      } Boundaries: [E]: ${
+        schedule.description.match(/\[EAST\]\s*([^[]+)/)?.[1].trim() || "N/A"
+      } [W]: ${
+        schedule.description.match(/\[WEST\]\s*([^[]+)/)?.[1].trim() || "N/A"
+      } [S]: ${
+        schedule.description.match(/\[SOUTH\]\s*([^[]+)/)?.[1].trim() || "N/A"
+      } [N]: ${
+        schedule.description.match(/\[NORTH\]\s*([^[]+)/)?.[1].trim() || "N/A"
+      }`,
+      dates: `(E) ${new Date(document.executionDate).toLocaleDateString(
+        "en-GB"
+      )}`,
+      deedValue: `${item.articleNamee}\nMkt.Value: Rs. ${item.marketValue}`,
+      parties: parties,
+      identifiers: `${document.cdNumber}\n\n${document.documentReference} [1] of SRO (${document.sroCode})`,
+    };
+  });
+};
+
+async function kaEc({
+  houseNo,
+  surveyNo,
+  village,
+  ward,
+  block,
+  district,
+  encumbranceType,
+  startDate,
+  endDate,
+  plotNo,
+  flatNo,
+  taluk,
+  town,
+}) {
+  const browser = await puppeteerInstance();
+  let page = await browser.newPage();
+  try {
     switch (encumbranceType) {
       case "ENCUMBRANCE_TYPE.ASNOS":
+        await initializeKaEc(page, village, district, taluk, town);
         await fillAggriForm(page, surveyNo);
         break;
 
       case "ENCUMBRANCE_TYPE.HNOS":
+        await initializeKaEc(page, village, district, taluk, town);
         await fillNonAggriForm(page, ["House No", "Door No"], houseNo);
         break;
 
       case "ENCUMBRANCE_TYPE.SNOS":
+        await initializeKaEc(page, village, district, taluk, town);
         await fillNonAggriForm(page, ["Survey No"], surveyNo);
         break;
 
       case "ENCUMBRANCE_TYPE.PNOS":
+        await initializeKaEc(page, village, district, taluk, town);
         await fillNonAggriForm(page, ["Flat No"], plotNo);
         break;
 
       case "ENCUMBRANCE_TYPE.FNOS":
+        await initializeKaEc(page, village, district, taluk, town);
         await fillNonAggriForm(page, ["Flat No", "APT No"], flatNo);
         break;
 
       default:
-        logger.info("Invalid encumbranceType! ");
         throw new Error("Invalid encumbranceType! ");
     }
 
@@ -299,24 +349,27 @@ async function kaEc({
     );
     console.log(ecResponse);
 
-    if (!ecResponse || !ecResponse?.data == []) {
+    if (!ecResponse || !JSON.parse(ecResponse?.data).length) {
       logger.error("Documents not found on search data.");
       return { status: "ok", filePath: dummyFilePath, sros: "" };
     }
+    let propertyData = formatPropertyData(JSON.parse(ecResponse.data));
+
     const filePath = await generatePDF(
       page,
       "#PdfData > table",
       `public/Downloads/${encumbranceType}`,
-      true
+      true,
+      propertyData
     );
-    await browser.close();
+    // await browser.close();
     return { status: "ok", filePath, sros: "" };
   } catch (error) {
     logger.error(error.message);
 
     throw new Error(error.message);
   } finally {
-    await browser.close();
+    // await browser.close();
   }
 }
 
