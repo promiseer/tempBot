@@ -187,7 +187,6 @@ const handleMultipleSro = async (
   plotNo
 ) => {
   const tasks = [];
-  multipleSros = multipleSros.map((s) => s.replace(/\s+/g, ""));
 
   for (let i = 0; i < multipleSros?.length; i += 2) {
     const sroPair = multipleSros.slice(i, i + 2);
