@@ -112,7 +112,7 @@ const attemptLogin = async (page, username, password, attempts = 1) => {
     await fillInput(page, "#captcha", captchaText);
 
     logger.info("Form filled.");
-    await clickButton(page, 'button.btn.btn-default[type="submit"]');
+    await clickButton(page, '#myForm > div:nth-child(9) > button');
 
     const loginErrorElement = await page
       .waitForSelector("#myForm > h4", { timeout: 5000 })
@@ -217,7 +217,7 @@ const handleLogin = async (page, browser) => {
     await delay(1000);
     await clickButton(
       page,
-      "body > div.xs-hidden > div:nth-child(1) > div.container > div > form > div:nth-child(8) > a"
+      "body > div > div:nth-child(2) > div > div > form > div:nth-child(8) > a"
     );
 
     const nextPage = await getNewPageWhenLoaded(browser);
