@@ -41,7 +41,7 @@ const processJob = async (job) => {
           const { filePath, sros } = await apEcDownloader(data);
           if (filePath) {
             const file = await uploadFileGC(fileDestination, `${filePath}.pdf`, fileKey);
-            await uploadFileGC(fileDestination, `${filePath}_extracted.json`, `${fileKey}__extracted`);
+            await uploadFileGC(fileDestination, `${filePath}_extracted.json`, `${fileKey}_extracted`);
             await createAttachement(caseId, file, sros, encumbranceType, data);
             await deleteFile(`${filePath}.pdf`);
             await deleteFile(`${filePath}_extracted.json`);
@@ -59,7 +59,7 @@ const processJob = async (job) => {
           const { filePath, sros } = await tgEcDownloader(data);
           if (filePath) {
             const file = await uploadFileGC(fileDestination, `${filePath}.pdf`, fileKey);
-            await uploadFileGC(fileDestination, `${filePath}_extracted.json`, `${fileKey}__extracted`);
+            await uploadFileGC(fileDestination, `${filePath}_extracted.json`, `${fileKey}_extracted`);
             await createAttachement(caseId, file, sros, encumbranceType, data);
             await deleteFile(`${filePath}.pdf`);
             await deleteFile(`${filePath}_extracted.json`);
@@ -74,7 +74,7 @@ const processJob = async (job) => {
           const { filePath, sros } = await kaEcDownloader(data);
           if (filePath) {
             const file = await uploadFileGC(fileDestination, `${filePath}.pdf`, fileKey);
-            await uploadFileGC(fileDestination, `${filePath}_extracted.json`, `${fileKey}__extracted`);
+            await uploadFileGC(fileDestination, `${filePath}_extracted.json`, `${fileKey}_extracted`);
             await createAttachement(caseId, file, sros, encumbranceType, data);
             await deleteFile(`${filePath}.pdf`);
             await deleteFile(`${filePath}_extracted.json`);
