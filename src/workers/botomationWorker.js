@@ -140,11 +140,13 @@ if (cluster.isMaster) {
   }
 
   cluster.on("exit", (worker, code, signal) => {
-    logger.info(
+    logger.warn(
       `Worker ${worker.process.pid} died with code ${code} and signal ${signal}`
     );
-    logger.info("Forking another worker...");
-    cluster.fork();
+    if (code !== 0) {
+      logger.info("Restarting worker...");
+      setTimeout(() => cluster.fork(), 1000); // Avoid immediate rapid restarts
+    }
   });
   logger.info(
     `Master process ${process.pid} is running with ${totalCPUs} concurrent workers.`
@@ -153,7 +155,12 @@ if (cluster.isMaster) {
   // Each worker will process jobs with a concurrency limit
   Queue.process(totalCPUs, async (job) => {
     logger.info(`Worker ${process.pid} is processing job ${job.id}`);
-    await processJob(job);
-    logger.info(`Worker ${process.pid} finished job ${job.id}`);
+    try {
+      await processJob(job);
+    } catch (error) {
+      logger.error(`Error in worker ${process.pid}: ${error.message}`);
+    } finally {
+      logger.info(`Worker ${process.pid} finished job ${job.id}`);
+    }
   });
 }
