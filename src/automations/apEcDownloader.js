@@ -122,7 +122,7 @@ const searchByDocumentNumber = async (
         const elementNo = i + 1;
         if (
           propertyData.data.propertyList[i].sy1 ||
-          propertyData.data.propertyList[i].hno ||
+          (propertyData.data.propertyList[i].hno && propertyData.data.propertyList[i].hno !== ",,") ||
           propertyData.data.propertyList[i].wardno ||
           propertyData.data.propertyList[i].blockno
         ) {
