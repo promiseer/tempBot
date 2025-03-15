@@ -201,13 +201,13 @@ const initializeKaEc = async (page, village, district, taluk, town) => {
     await delay(1000);
     await clickButton(
       page,
-      "body > div:nth-child(1) > app-root > div > div > app-kaveri-dashboard > div > div.animated.fadeIn.mt-3.ng-tns-c190-2 > div > div.row.p-2.ng-tns-c190-2 > div.col-md-4.d-flex.align-items-center.justify-content-center.ng-tns-c190-2 > div > button"
+      "body > div:nth-child(1) > app-root > div > div > app-kaveri-dashboard > div > div.animated.fadeIn.mt-3.ng-tns-c184-1 > div > div.row.p-2.ng-tns-c184-1 > div.col-md-4.d-flex.align-items-center.justify-content-center.ng-tns-c184-1 > div > button"
     );
     await delay(1000);
 
     await clickButton(
       page,
-      "body > div:nth-child(1) > app-root > div > div > app-kaveri-dashboard > div > div.applicationTypeOverlay.ng-tns-c190-2.ng-star-inserted > div > app-application-type > div > div > div.card-body > div.row.mt-4 > div:nth-child(2) > img"
+      "body > div:nth-child(1) > app-root > div > div > app-kaveri-dashboard > div > div.applicationTypeOverlay.ng-tns-c184-1.ng-star-inserted > div > app-application-type > div > div > div.card-body > div.row.mt-4 > div:nth-child(2) > img"
     );
 
     await delay(1000);
