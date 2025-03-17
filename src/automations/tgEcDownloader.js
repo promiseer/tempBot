@@ -145,8 +145,8 @@ const handlePostFormFIlled = async (page, docNoIdentifier) => {
       page.waitForNavigation({
           waitUntil: ["networkidle2", "domcontentloaded"],
           timeout: 60000,
-        })
-        .catch(() => logger.info("Navigation timeout or error occurred")),
+        }),
+        // .catch(() => logger.info("Navigation timeout or error occurred")),
       new Promise((resolve) => setTimeout(resolve, 5000)), // Timeout for fast-loading pages
     ]);
 
