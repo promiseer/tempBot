@@ -6,11 +6,13 @@ const {
   selectOption,
   generatePDF,
   responseValidator,
+  makeRequest,
 } = require("../../utils/pupeteer");
 let dummyFilePath = "public/dummy/dummy";
 
 const fetchOtpFromEmail = require("../../utils/fetchOtp");
 const logger = require("../../utils/logger");
+const moment = require("moment");
 // Login function
 const login = async (page) => {
   await clickButton(page, "#headerMain > ul > span > li:nth-child(2) > button");
@@ -282,6 +284,118 @@ const formatPropertyData = (data) => {
   });
 };
 
+const ecSearch = async (Token, payload) => {
+  console.log(Token, payload);
+
+  try {
+    const ecResponse = await makeRequest(
+      `https://kaveri.karnataka.gov.in/api/ECSearch`,
+      "post",
+      {
+        Authorization: `Bearer ${Token}`,
+      },
+      payload
+    );
+
+    return ecResponse.data || [];
+  } catch (error) {
+    throw error;
+  }
+};
+
+const kaLogin = async () => {
+  try {
+    const loginResponse = await makeRequest(
+      `https://kaveri.karnataka.gov.in/api/LoginDataTest`,
+      "post",
+      {},
+      {
+        loginname:
+          "Qswe5Z23xs2YeFjVMJlRgpiwIi0lf9mw6GAY4XkJKjOqBhyQkCutskvOZ26YoBm/yd9NUt8ybp2TAPqM0TaFE+Vr9OW+iMVVHFNimDFTAAuiljXlDgltAtUPmH80qcAdjUDnfRofVdP8qHnYjVa7+eINeGRcXU9FvI++1ZrKddhQKGN/c3WQTA2nbF8Q5iCcv9wp9uiDcHgjGkq6fZ82oHDpB8vYkDYiiahzFovxQVxz8llqe3X+VHTR1nv6HnjN4rAEIC2TNpj459gII/VLge6AgxoeTlwA6GG39qw8YZ5IpLgwcZMqH2NzLT5f4q4mV1p2WISbovKitWvhNWDjNg==",
+        password:
+          "A0cSFyrJGLaQDHcQYcz46hYeJz1sI+cM8vnxa9ukD1qoX4tuffqPle6sEsGABKrvtTAFDtDIa3ip12GhvTQu3LN5SwPg3SSO7gkMqh8VoGcN13lbbllob6SZGoLacKYdZr2jyZ0BkjfuxPGJwtJz6D5JCAZIGEkHAni+/DpVSSEqiZxj7B+5DC6pn3YGalybcZCciia5h8lwRu+hKrA9dWMErxAqgULfX6y5B3hJXCHOVQXj9dGFnU5FU2y5M0lAuIqxmjNjMw6dyy12hi75Dum+L3Ye73W4KA4wwcLhB9GR/zQARegP4+cQnt4RS4aKbcRXzsDDwZv972fPRyZDDA==",
+      }
+    );
+
+    // Check if login needs to be reset
+    if (
+      loginResponse.data &&
+      loginResponse.data.length &&
+      !loginResponse.data[0].citizenid
+    ) {
+      console.log("Login needs to be reset. Attempting to reset...");
+      await kaResetLogin();
+      return kaLogin();
+    }
+
+    // Return the actual login response data
+    return loginResponse.data || [];
+  } catch (error) {
+    console.error("Login error:", error.message);
+    throw error;
+  }
+};
+
+const kaResetLogin = async () => {
+  try {
+    const resetLoginResponse = await makeRequest(
+      `https://kaveri.karnataka.gov.in/api/ResetLogoutStatus`,
+      "post",
+      {},
+      {
+        loginname:
+          "bb2NTEIX0+mZnq93YIwSrFtm0p/jxn+oPUVDy4FePnkjXKRXURUF/quIojuY6CUrYHdX9jXPgcn9UPilATvGVTVJFNEz2Jn6RZxnzVfDYvELuwqNhlUhD15IXuPBNpZutu04BXljoa0gVYfFpQvOwUoL0SWe2JJXRpkL9F+oTJlUdCO+oOB5LlSSGpps2xrskkjAm9O1wDrCfWQ0AfP+L3kYGvWlWkapFRuoTLDXsVfVzB9ZLFUQbgtmw58o5R4aQG4SDKe6A+5oRmwBaCCMb7sY+SE+d2a/zdFz9j7NaJVOiNzG/TysIg95DYzFIWyr8NTukpgjl4xnbczFfSdQVA==",
+      }
+    );
+
+    return resetLoginResponse.data || [];
+  } catch (error) {
+    throw error;
+  }
+};
+
+const GetPropertyTypeMasterAsync = async () => {
+  try {
+    const propertyTypeResponse = await makeRequest(
+      `https://kaveri.karnataka.gov.in/api/GetPropertyTypeMasterAsync`,
+      "post"
+    );
+
+    return propertyTypeResponse.data || [];
+  } catch (error) {
+    throw error;
+  }
+};
+
+const initializeKaEcV2 = async (
+  _fromdate,
+  _todate,
+  _villageCode,
+  propertyTypes,
+  inputData
+) => {
+  _fromdate = moment(_fromdate, "DD-MM-YYYY").format("YYYY-MM-DD");
+  _todate = moment(_todate, "DD-MM-YYYY").format("YYYY-MM-DD");
+  const loginResponse = await kaLogin();
+  const Token = loginResponse[0]?.jwtToken;
+  const propertyTypeResponse = await GetPropertyTypeMasterAsync();
+  const p_srch_property = propertyTypeResponse
+    .filter((item) => propertyTypes.includes(item.typeNameEnglish))
+    .map((item) => ({
+      _currentproperttypeid: String(item.propertytypeid),
+      _currentnumber: inputData,
+    }));
+
+  const ecSearchResponse = await ecSearch(Token, {
+    _villageCode,
+    p_srch_property,
+    _fromdate,
+    _todate,
+    EcFilter: "p",
+  });
+  return ecSearchResponse;
+};
+
 async function kaEc({
   houseNo,
   surveyNo,
@@ -296,58 +410,99 @@ async function kaEc({
   flatNo,
   taluk,
   town,
+  villageCode,
 }) {
   const browser = await puppeteerInstance();
   let page = await browser.newPage();
+  let ecResponse = null;
   try {
     switch (encumbranceType) {
       case "ENCUMBRANCE_TYPE.ASNOS":
-        await initializeKaEc(page, village, district, taluk, town);
-        await fillAggriForm(page, surveyNo);
+      case "ENCUMBRANCE_TYPE.SNOS":
+        // await initializeKaEc(page, village, district, taluk, town);
+        // await fillAggriForm(page, surveyNo);
+        ecResponse = await initializeKaEcV2(
+          startDate,
+          endDate,
+          villageCode,
+          ["Survey No"],
+          surveyNo
+        );
+
         break;
 
       case "ENCUMBRANCE_TYPE.HNOS":
-        await initializeKaEc(page, village, district, taluk, town);
-        await fillNonAggriForm(page, ["House No", "Door No"], houseNo);
+        // await initializeKaEc(page, village, district, taluk, town);
+        // await fillNonAggriForm(page, ["House No", "Door No"], houseNo);
+        ecResponse = await initializeKaEcV2(
+          startDate,
+          endDate,
+          villageCode,
+          ["House No", "Door No"],
+          houseNo
+        );
         break;
 
-      case "ENCUMBRANCE_TYPE.SNOS":
-        await initializeKaEc(page, village, district, taluk, town);
-        await fillNonAggriForm(page, ["Survey No"], surveyNo);
-        break;
+      // case "ENCUMBRANCE_TYPE.SNOS":
+      // // await initializeKaEc(page, village, district, taluk, town);
+      // // await fillNonAggriForm(page, ["Survey No"], surveyNo);
+      // ecResponse = await initializeKaEcV2(
+      //   startDate,
+      //   endDate,
+      //   villageCode,
+      //   ["Survey No"],
+      //   surveyNo
+      // );
+      // break;
 
       case "ENCUMBRANCE_TYPE.PNOS":
-        await initializeKaEc(page, village, district, taluk, town);
-        await fillNonAggriForm(page, ["Flat No"], plotNo);
+        // await initializeKaEc(page, village, district, taluk, town);
+        // await fillNonAggriForm(page, ["Flat No"], plotNo);
+        ecResponse = await initializeKaEcV2(
+          startDate,
+          endDate,
+          villageCode,
+          ["Flat No"],
+          plotNo
+        );
         break;
 
       case "ENCUMBRANCE_TYPE.FNOS":
-        await initializeKaEc(page, village, district, taluk, town);
-        await fillNonAggriForm(page, ["Flat No", "APT No"], flatNo);
+        // await initializeKaEc(page, village, district, taluk, town);
+        // await fillNonAggriForm(page, ["Flat No", "APT No"], flatNo);
+        ecResponse = await initializeKaEcV2(
+          startDate,
+          endDate,
+          villageCode,
+          ["Flat No", "APT No"],
+          flatNo
+        );
         break;
 
       default:
         throw new Error("Invalid encumbranceType! ");
     }
 
-    await fillDate(page, 'input[name="fromdate"]', startDate); //startDate
-    endDate
-      ? await fillDate(page, 'input[name="todate"]', endDate)
-      : logger.info("Skipping Date input as it's empty");
-    //endDate
+    // await fillDate(page, 'input[name="fromdate"]', startDate); //startDate
+    // console.log("Filled Start Date:", startDate);
+    // await fillDate(page, 'input[name="fromdate"]', startDate); //startDate
+    // endDate
+    //   ? await fillDate(page, 'input[name="todate"]', endDate)
+    //   : logger.info("Skipping Date input as it's empty");
+    // //endDate
 
-    await delay(1000);
+    // await delay(1000);
 
-    await clickButton(
-      page,
-      "body > div:nth-child(1) > app-root > div > div > app-ec-search-citizen > div > div.containe-lg > div > div > form > div.mt-3.text-center > button.mat-tooltip-trigger.btn.btn-primary.mr-1.ng-star-inserted"
-    );
+    // await clickButton(
+    //   page,
+    //   "body > div:nth-child(1) > app-root > div > div > app-ec-search-citizen > div > div.containe-lg > div > div > form > div.mt-3.text-center > button.mat-tooltip-trigger.btn.btn-primary.mr-1.ng-star-inserted"
+    // );
 
-    const ecResponse = await responseValidator(
-      page,
-      "https://kaveri.karnataka.gov.in/api/ECSearch"
-    );
-    console.log(ecResponse);
+    // const ecResponse = await responseValidator(
+    //   page,
+    //   "https://kaveri.karnataka.gov.in/api/ECSearch"
+    // );
+    // console.log(ecResponse);
 
     if (!ecResponse || !JSON.parse(ecResponse?.data).length) {
       logger.error("Documents not found on search data.");
