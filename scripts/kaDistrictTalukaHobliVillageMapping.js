@@ -110,6 +110,7 @@ const fetchKAVillageDistricts = async () => {
               district: districtName,
               mandal: talukaName,
               village: village.villagenamee,
+              villagecode: village.villagecode,
               sroName: null,
               zone: null,
               town: hobliName,
