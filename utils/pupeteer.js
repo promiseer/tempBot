@@ -41,12 +41,7 @@ const initializeBrowser = async (options = {}) => {
   ];
 
   // Merge custom args with default args if provided
-  const args = options.args 
-    ? [...defaultArgs, ...options.args]
-    : defaultArgs;
-
-  // Remove customArgs from options to avoid duplicating in puppeteer.launch
-  const { customArgs, ...restOptions } = options;
+  const args = options.args ? [...defaultArgs, ...options.args] : defaultArgs;
 
   return await puppeteer.launch({
     headless: true,
@@ -56,7 +51,7 @@ const initializeBrowser = async (options = {}) => {
     defaultViewport: null,
     ignoreHTTPSErrors: true,
     args,
-    ...restOptions,
+    ...options,
   });
 };
 
