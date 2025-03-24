@@ -1,6 +1,6 @@
 const fs = require("fs");
 const logger = require("../../utils/logger");
-const { clickButton } = require("../../utils/pupeteer");
+const { clickButton, delay } = require("../../utils/pupeteer");
 const {
   selectDropdownOption,
   handleCaptcha,
@@ -63,13 +63,14 @@ async function clickAndSearchEcDnos(page, sroName, docNo, docYear) {
     let captchaImagePath = null;
     try {
       logger.info(`DNOS attempt ${attempt} of ${maxCaptchaAttempts}...`);
-      await new Promise((r) => setTimeout(r, 5000));
+      await delay(5000); // extra delay before clicking SearchDoc
 
       // If there's a captcha field (#txt_Captcha), solve it.
       // If not found, we assume no captcha needed for this scenario.
       const captchaSelector = "#txt_Captcha";
       const captchaField = await page.$(captchaSelector);
       if (captchaField) {
+        await delay(1000); // extra delay before solving captcha
         await page.waitForSelector(captchaSelector, { timeout: 15000 });
         captchaImagePath = await handleCaptcha(page);
       } else {
@@ -167,7 +168,7 @@ async function clickAndSearchEcDnos(page, sroName, docNo, docYear) {
         }
         link.click();
       });
-
+      await delay(1000);
       // Then we wait for the final "Click here" link for the PDF
       logger.info("Waiting for final PDF link ('Click here')...");
       await page.waitForSelector(
