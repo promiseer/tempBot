@@ -23,7 +23,31 @@ const puppeteerInstance = async (options = {}) => {
   }
 };
 
-const initializeBrowser = async (options) => {
+const initializeBrowser = async (options = {}) => {
+  const defaultArgs = [
+    "--start-maximized",
+    "--no-sandbox",
+    "--disable-setuid-sandbox",
+    "--disable-dev-shm-usage",
+    "--proxy-bypass-list=*",
+    "--disable-gpu",
+    "--no-first-run",
+    // "--no-zygote",
+    // "--single-process",
+    "--ignore-certificate-errors",
+    "--ignore-certificate-errors-spki-list",
+    "--enable-features=NetworkService",
+    "--unlimited-storage",
+  ];
+
+  // Merge custom args with default args if provided
+  const args = options.args 
+    ? [...defaultArgs, ...options.args]
+    : defaultArgs;
+
+  // Remove customArgs from options to avoid duplicating in puppeteer.launch
+  const { customArgs, ...restOptions } = options;
+
   return await puppeteer.launch({
     headless: true,
     timeout: 60000, // Adjust timeout as needed
@@ -31,22 +55,8 @@ const initializeBrowser = async (options) => {
     caches: true, // Disable caching
     defaultViewport: null,
     ignoreHTTPSErrors: true,
-    args: [
-      "--start-maximized",
-      "--no-sandbox",
-      "--disable-setuid-sandbox",
-      "--disable-dev-shm-usage",
-      "--proxy-bypass-list=*",
-      "--disable-gpu",
-      "--no-first-run",
-      // "--no-zygote",
-      // "--single-process",
-      "--ignore-certificate-errors",
-      "--ignore-certificate-errors-spki-list",
-      "--enable-features=NetworkService",
-      "--unlimited-storage",
-    ],
-    ...options,
+    args,
+    ...restOptions,
   });
 };
 

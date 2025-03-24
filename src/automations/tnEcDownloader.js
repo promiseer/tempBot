@@ -11,6 +11,10 @@ const moment = require("moment");
  */
 async function setBrowserLanguageToEnglish(browser) {
   const page = await browser.newPage();
+  await page.authenticate({
+    username: process.env.PROXY_USERNAME,
+    password: process.env.PROXY_PASSWORD,
+  });
   try {
     await page.goto("https://tnreginet.gov.in/portal/", { waitUntil: "load" });
 
@@ -107,7 +111,10 @@ async function tnEcDownloader({
 }) {
   logger.info(":: TN EC Downloader Automation Started ::");
 
-  const browser = await puppeteerInstance();
+  const ProxyUrl = process.env.PROXY_URL || "";
+  const browser = await puppeteerInstance({
+    args: [`--proxy-server=${ProxyUrl}`],
+  });
   let filePaths = [];
 
   try {
