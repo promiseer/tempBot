@@ -44,6 +44,7 @@ async function clickAndSearchEcDnos(page, sroName, docNo, docYear) {
     logger.error("DOC_WISE radio button not found or couldn't click it.");
     return null;
   }
+  await delay(1000); // extra delay before solving captcha
 
   // Wait for doc fields (txt_DocumentNo, etc.) to appear
   await page.waitForSelector("#txt_DocumentNo", { timeout: 60000 });
