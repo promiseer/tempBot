@@ -114,6 +114,7 @@ const getMandalDetails = async (district, headers) => {
           district: district.drname,
           mandal: mandal.mandal_name,
           village: village.village_name,
+          villagecode: null,
           sroName: null,
           zone: null,
           town: null,

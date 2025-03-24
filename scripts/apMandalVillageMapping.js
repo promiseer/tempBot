@@ -48,6 +48,7 @@ const fetchApMandalVillage= async () => {
               district: district.DISTRICT_NAME,
               mandal: mandal.MANDAL_NAME,
               village: village.VILLAGE_NAME,
+              villageCode: null,
               sroName: null,
               zone: null,
               town: null,
