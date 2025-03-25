@@ -23,7 +23,7 @@ const puppeteerInstance = async (options = {}) => {
   }
 };
 
-const initializeBrowser = async (options = {}) => {
+const initializeBrowser = async (options = {}, args = []) => {
   const defaultArgs = [
     "--start-maximized",
     "--no-sandbox",
@@ -41,16 +41,15 @@ const initializeBrowser = async (options = {}) => {
   ];
 
   // Merge custom args with default args if provided
-  const args = options.args ? [...defaultArgs, ...options.args] : defaultArgs;
 
   return await puppeteer.launch({
-    headless: true,
+    headless: false,
     timeout: 60000, // Adjust timeout as needed
     saveSessionData: true, // Set to true to save session data
     caches: true, // Disable caching
     defaultViewport: null,
     ignoreHTTPSErrors: true,
-    args,
+    args: [...args, ...defaultArgs],
     ...options,
   });
 };

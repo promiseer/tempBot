@@ -112,9 +112,7 @@ async function tnEcDownloader({
   logger.info(":: TN EC Downloader Automation Started ::");
 
   const ProxyUrl = process.env.PROXY_URL || "";
-  const browser = await puppeteerInstance({
-    args: [`--proxy-server=${ProxyUrl}`],
-  });
+  const browser = await puppeteerInstance({}, [`--proxy-server=${ProxyUrl}`]);
   let filePaths = [];
 
   try {
