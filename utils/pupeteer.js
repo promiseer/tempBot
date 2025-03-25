@@ -29,7 +29,7 @@ const initializeBrowser = async (options = {}, args = []) => {
     "--no-sandbox",
     "--disable-setuid-sandbox",
     "--disable-dev-shm-usage",
-    "--proxy-bypass-list=*",
+    // "--proxy-bypass-list=*",
     "--disable-gpu",
     "--no-first-run",
     // "--no-zygote",
