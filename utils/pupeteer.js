@@ -43,7 +43,7 @@ const initializeBrowser = async (options = {}, args = []) => {
   // Merge custom args with default args if provided
 
   return await puppeteer.launch({
-    headless: false,
+    headless: true,
     timeout: 60000, // Adjust timeout as needed
     saveSessionData: true, // Set to true to save session data
     caches: true, // Disable caching
