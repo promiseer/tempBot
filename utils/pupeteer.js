@@ -9,9 +9,9 @@ const { default: axios } = require("axios");
 
 const solver = new Captcha.Solver(process.env.CAPTCHA_KEY);
 
-const puppeteerInstance = async (options = {}) => {
+const puppeteerInstance = async (options = {}, args = []) => {
   try {
-    const browser = await initializeBrowser(options);
+    const browser = await initializeBrowser(options, args);
 
     browser.on("disconnected", () => {
       logger.info(":: Browser disconnected");
@@ -49,7 +49,7 @@ const initializeBrowser = async (options = {}, args = []) => {
     caches: true, // Disable caching
     defaultViewport: null,
     ignoreHTTPSErrors: true,
-    args: [...args, ...defaultArgs],
+    args: [...defaultArgs, ...args],
     ...options,
   });
 };
